@@ -174,17 +174,18 @@ espacoCelular:synchronize()
 -- ===============================================================
 ModeloMangue = Model {
     start = 1,
-    finalTime = 100,
+    finalTime = 88,
 
     areaCelula = 0.09,
     alturaMare = 6, -- altura da maré (Ferreira, 1988)
-    taxaElevacaoMar = 0.5,
-    --taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
+    --taxaElevacaoMar = 0.5,  -- so para testar
+    taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
 
     init = function(modelo)
 
         inicializarAreas(modelo)
 
+       
         modelo.grafico = Chart{
             target = modelo,
             select = {
@@ -193,6 +194,8 @@ ModeloMangue = Model {
                 "areaMangueMigrado"
             }
         }
+    
+
 
         modelo.mapaAltitude = mapaAltitude(espacoCelular)
         modelo.mapaUso = mapaUso(espacoCelular)
@@ -203,25 +206,25 @@ ModeloMangue = Model {
                     local tempo = evento:getTime()
                     print("ITERAÇÃO:", tempo)
 
+
+                    ---------------------------------------------------------
+                    -- DINÂMICA DO MANGUE
+                    ----------------------------------
+                    ----- AUMENTO DE NÍVEL DO MAR
+                    local nivelMar = tempo * modelo.taxaElevacaoMar
+                    -- no modelo de 2014: Increased_see = cell.Alt2 + (time * Tx_elev) 
+                    --- Pergunta: na tese tem esses valor por iteracao, se assumir todas celulas zero, entao nao precisa estar dentro do loop de celulas
+                    
+                    local nivelMar_mm = nivelMar * 1000
+                    local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
+                    local taxaAcrecao_m = taxaAcrecao_mm / 1000
+
+                    print (tempo+2012,nivelMar, taxaAcrecao_m)
+
+                    local zonaInfluencia = modelo.alturaMare + nivelMar
+
                     forEachCell(espacoCelular, function(celula)
-
-
-                        --- no codigo de 2014: Increased_see = cell.Alt2 + (time * Tx_elev)
-                        --- mas nao tem o fluxo de agua para as celulas
-                        --- so mudava o uso
-                        --local nivelMar = celula.Alt2 + tempo * modelo.taxaElevacaoMar
-                        -- com o fluxo de agua para as celulas, nao posso calcular dessa maneira
-                        --local nivelMar = celula.Alt2 + tempo * modelo.taxaElevacaoMar
-                        -- se eu nao uso aqui o valor da celula, logo poderia deixar isso fora
-                        -- mas nesse caso, tem a questao da acrescao da lama
-                        local nivelMar = tempo * modelo.taxaElevacaoMar
-                        local nivelMar_mm = nivelMar * 1000
-                        local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
-                        local taxaAcrecao_m = taxaAcrecao_mm / 1000
-                        local zonaInfluencia = modelo.alturaMare + nivelMar
-
-
-                        -- AUMENTO DE NÍVEL DO MAR
+                        
                         if ehMarOuInundado(celula.past.Usos) and celula.past.Alt2 >= 0 then
                             local vizinhosBaixos = 1
 
@@ -231,8 +234,8 @@ ModeloMangue = Model {
                                 end
                             end)
 
-                            local fluxo = nivelMar / vizinhosBaixos
-                            celula.Alt2 = celula.Alt2 + fluxo --DISTRIBUINDO O AUMENTO DE �GUA, ---QUANDO N�O TEM VIZINHO MAIS BAIXO A C�LULA RECEBE A �GUA TODA
+                            local fluxo = modelo.taxaElevacaoMar / vizinhosBaixos
+                            celula.Alt2 = celula.Alt2 + fluxo
 
                             forEachNeighbor(celula, function(vizinho)
                                 if vizinho.past.Alt2 < celula.past.Alt2 then
@@ -244,10 +247,7 @@ ModeloMangue = Model {
                                 end
                             end)
                         end
-                        ---------------------------------------------------------
-                        -- DINÂMICA DO MANGUE
-                        ----------------------------------
-        
+
 
                         if celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_CANAL_FLUVIAL then
                             forEachNeighbor(celula, function(vizinho)
@@ -270,7 +270,6 @@ ModeloMangue = Model {
                         end
 
                         -- ACRESÇÃO VERTICAL DA LAMA
-                        -- deve ficar dentro do uso de agua ou inundado ?
                         if (celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_MANGUE_MIGRADO)
                             and not ehMarOuInundado(celula.Usos) then
                             celula.Alt2 = celula.Alt2 + taxaAcrecao_m
@@ -282,8 +281,8 @@ ModeloMangue = Model {
                 end
             },
 
-            Event { action = modelo.mapaAltitude },
-            Event { action = modelo.mapaUso },
+            --Event { action = modelo.mapaAltitude },
+            --Event { action = modelo.mapaUso },
 
             Event {
                 action = function(evento)
