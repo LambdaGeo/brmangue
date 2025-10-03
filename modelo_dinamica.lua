@@ -280,7 +280,9 @@ ModeloMangue = Model {
                             end)
                         end
 
-                        if celula.Usos == USO_MANGUE then
+
+                        --if celula.Usos == USO_MANGUE then
+                        if celula.past.Usos == USO_MANGUE or celula.past.Usos == USO_MANGUE_MIGRADO then
                             forEachNeighbor(celula, function(vizinho)
                                 if (vizinho.Usos == USO_VEGETACAO_TERRESTRE or vizinho.Usos == USO_SOLO_DESCOBERTO)
                                     and vizinho.Alt2 <= zonaInfluencia
