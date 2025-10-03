@@ -85,6 +85,11 @@ function aplicarInundacao(celula)
     local usoAtual = celula.past.Usos
     if usoAtual == USO_MANGUE then
         celula.Usos = USO_MANGUE_INUNDADO
+    
+    elseif usoAtual == USO_MANGUE_MIGRADO then  -- inclui nos testes
+        celula.Usos = USO_MANGUE_INUNDADO
+
+
     elseif usoAtual == USO_VEGETACAO_TERRESTRE then
         celula.Usos = USO_VEGETACAO_TERRESTRE_INUNDADA
     elseif usoAtual == USO_AREA_ANTROPIZADA then
@@ -169,7 +174,7 @@ function mapaAltitude(espacoCelular)
         target = espacoCelular,
         select = "Alt2",
         color = "RdYlGn",
-        slices = 5,
+        slices = 10,
         size = 1
     }
 end
@@ -250,7 +255,7 @@ ModeloMangue = Model {
                                     vizinho.Alt2 = vizinho.Alt2 + fluxo
 
                                     if not ehMarOuInundado(vizinho.past.Usos) then
-                                        --aplicarInundacao(vizinho)
+                                        aplicarInundacao(vizinho)
                                     end
                                 end
                             end)
