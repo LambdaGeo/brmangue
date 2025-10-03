@@ -140,6 +140,30 @@ function mapaUso(espacoCelular)
     }
 end
 
+
+function mapaSolo(espacoCelular)
+    return Map {
+        target = espacoCelular,
+        select = "ClaseSolos",
+        value = {
+            SOLO_CANAL_FLUVIAL,
+            SOLO_MANGUE,
+            SOLO_MANGUE_MIGRADO
+            -- adicione aqui outras classes de solo que você tiver definido
+        },
+        color = {
+            { 0,   0,   255 },   -- Canal Fluvial (azul)
+            { 0,   100, 0 },     -- Mangue (verde escuro)
+            { 34,  139, 34 }     -- Mangue Migrado (verde floresta)
+        },
+        label = {
+            "Canal Fluvial",
+            "Mangue",
+            "Mangue Migrado"
+        }
+    }
+end
+
 function mapaAltitude(espacoCelular)
     return Map {
         target = espacoCelular,
@@ -156,7 +180,7 @@ end
 local projeto = Project {
     file = "recorte.qgs",
     --cell_usos = "data/anil/elevacao_pol.shp",
-    cell_usos = "data/teste1/Recorte_Teste.shp",
+    cell_usos = "data/teste_dinamica/Recorte_Teste.shp",
     clean = true
 }
 
@@ -179,8 +203,8 @@ ModeloMangue = Model {
 
     areaCelula = 0.09,
     alturaMare = 6, -- altura da maré (Ferreira, 1988)
-    --taxaElevacaoMar = 0.5,
-    taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
+    taxaElevacaoMar = 0.5,
+    --taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
 
     init = function(modelo)
 
@@ -197,12 +221,15 @@ ModeloMangue = Model {
 
         modelo.mapaAltitude = mapaAltitude(espacoCelular)
         modelo.mapaUso = mapaUso(espacoCelular)
+        modelo.mapaSolo = mapaSolo(espacoCelular)
 
         modelo.timer = Timer {
             Event {
                 action = function(evento)
                     local tempo = evento:getTime()
-                    print("ITERAÇÃO:", tempo)
+                    
+                    local nivelMar = 0
+                    local zonaInfluencia = modelo.alturaMare 
 
                     forEachCell(espacoCelular, function(celula)
                         -- AUMENTO DE NÍVEL DO MAR
@@ -223,7 +250,7 @@ ModeloMangue = Model {
                                     vizinho.Alt2 = vizinho.Alt2 + fluxo
 
                                     if not ehMarOuInundado(vizinho.past.Usos) then
-                                        aplicarInundacao(vizinho)
+                                        --aplicarInundacao(vizinho)
                                     end
                                 end
                             end)
@@ -231,13 +258,19 @@ ModeloMangue = Model {
                         ---------------------------------------------------------
                         -- DINÂMICA DO MANGUE
                         ----------------------------------
-                        local nivelMar = tempo * modelo.taxaElevacaoMar
+                        --local nivelMar = tempo * modelo.taxaElevacaoMar
+                        nivelMar = tempo * modelo.taxaElevacaoMar
                         local nivelMar_mm = nivelMar * 1000
                         local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
                         local taxaAcrecao_m = taxaAcrecao_mm / 1000
-                        local zonaInfluencia = modelo.alturaMare + nivelMar
+                        zonaInfluencia = modelo.alturaMare + nivelMar
 
-                        if celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_CANAL_FLUVIAL then
+                        
+                        -- acho que faltou aqui olhar para o mangue migrado 
+                        -- if celula.ClaseSolos == SOLO_MANGUE  or  celula.ClaseSolos == SOLO_MANGUE_MIGRADO  or  celula.ClaseSolos == SOLO_CANAL_FLUVIAL then
+                        -- e ter cuidado com o past
+                        if celula.past.ClaseSolos == SOLO_MANGUE or  celula.past.ClaseSolos == SOLO_MANGUE_MIGRADO  or celula.past.ClaseSolos == SOLO_CANAL_FLUVIAL then
+                        --if celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_CANAL_FLUVIAL then
                             forEachNeighbor(celula, function(vizinho)
                                 if (vizinho.Usos == USO_VEGETACAO_TERRESTRE or vizinho.Usos == USO_SOLO_DESCOBERTO)
                                     and vizinho.ClaseSolos ~= SOLO_MANGUE
@@ -261,17 +294,22 @@ ModeloMangue = Model {
                         if (celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_MANGUE_MIGRADO)
                             and not ehMarOuInundado(celula.Usos) then
                             -- Duvida: posso somar direto a acreacao_m se ela é um valor acumulado?
-                            celula.Alt2 = celula.Alt2 + taxaAcrecao_m
+                            --celula.Alt2 = celula.Alt2 + taxaAcrecao_m
                         end
                         
                     end)
 
                     espacoCelular:synchronize()
+                    print("ITERAÇÃO:", tempo, nivelMar, zonaInfluencia)
+
+                    print("Pressione ENTER para continuar...")
+                    io.read() -- aguarda o usuário digitar algo (ENTER já basta)
                 end
             },
 
             Event { action = modelo.mapaAltitude },
             Event { action = modelo.mapaUso },
+            Event { action = modelo.mapaSolo },
 
             Event {
                 action = function(evento)

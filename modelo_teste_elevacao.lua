@@ -155,7 +155,6 @@ end
 -- ===============================================================
 local projeto = Project {
     file = "recorte.qgs",
-    --cell_usos = "data/anil/elevacao_pol.shp",
     cell_usos = "data/teste1/Recorte_Teste.shp",
     clean = true
 }
@@ -175,17 +174,18 @@ espacoCelular:synchronize()
 -- ===============================================================
 ModeloMangue = Model {
     start = 1,
-    finalTime = 100,
+    finalTime = 88,
 
     areaCelula = 0.09,
     alturaMare = 6, -- altura da maré (Ferreira, 1988)
-    --taxaElevacaoMar = 0.5,
+    --taxaElevacaoMar = 0.5,  -- so para testar
     taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
 
     init = function(modelo)
 
         inicializarAreas(modelo)
 
+       
         modelo.grafico = Chart{
             target = modelo,
             select = {
@@ -194,6 +194,8 @@ ModeloMangue = Model {
                 "areaMangueMigrado"
             }
         }
+    
+
 
         modelo.mapaAltitude = mapaAltitude(espacoCelular)
         modelo.mapaUso = mapaUso(espacoCelular)
@@ -202,10 +204,25 @@ ModeloMangue = Model {
             Event {
                 action = function(evento)
                     local tempo = evento:getTime()
-                    print("ITERAÇÃO:", tempo)
+                    
+
+
+                    ---------------------------------------------------------
+                    -- DINÂMICA DO MANGUE
+                    ----------------------------------
+                    ----- AUMENTO DE NÍVEL DO MAR
+                    local nivelMar = tempo * modelo.taxaElevacaoMar
+                    -- no modelo de 2014: Increased_see = cell.Alt2 + (time * Tx_elev) 
+                    --- Pergunta: na tese tem esses valor por iteracao, se assumir todas celulas zero, entao nao precisa estar dentro do loop de celulas
+                    
+                    local nivelMar_mm = nivelMar * 1000
+                    local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
+                    local taxaAcrecao_m = taxaAcrecao_mm / 1000
+                    local zonaInfluencia = modelo.alturaMare + nivelMar
+                    print (tempo+2012,nivelMar, taxaAcrecao_m, zonaInfluencia)
 
                     forEachCell(espacoCelular, function(celula)
-                        -- AUMENTO DE NÍVEL DO MAR
+                        
                         if ehMarOuInundado(celula.past.Usos) and celula.past.Alt2 >= 0 then
                             local vizinhosBaixos = 1
 
@@ -228,14 +245,7 @@ ModeloMangue = Model {
                                 end
                             end)
                         end
-                        ---------------------------------------------------------
-                        -- DINÂMICA DO MANGUE
-                        ----------------------------------
-                        local nivelMar = tempo * modelo.taxaElevacaoMar
-                        local nivelMar_mm = nivelMar * 1000
-                        local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
-                        local taxaAcrecao_m = taxaAcrecao_mm / 1000
-                        local zonaInfluencia = modelo.alturaMare + nivelMar
+
 
                         if celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_CANAL_FLUVIAL then
                             forEachNeighbor(celula, function(vizinho)
@@ -257,10 +267,9 @@ ModeloMangue = Model {
                             end)
                         end
 
-                        -- ACREÇÃO VERTICAL DA LAMA
+                        -- ACRESÇÃO VERTICAL DA LAMA
                         if (celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_MANGUE_MIGRADO)
                             and not ehMarOuInundado(celula.Usos) then
-                            -- Duvida: posso somar direto a acreacao_m se ela é um valor acumulado?
                             celula.Alt2 = celula.Alt2 + taxaAcrecao_m
                         end
                         
@@ -270,8 +279,8 @@ ModeloMangue = Model {
                 end
             },
 
-            Event { action = modelo.mapaAltitude },
-            Event { action = modelo.mapaUso },
+            --Event { action = modelo.mapaAltitude },
+            --Event { action = modelo.mapaUso },
 
             Event {
                 action = function(evento)

@@ -52,17 +52,26 @@ function inicializarAreas(modelo)
     for _, campo in pairs(mapa_uso_campo) do
         modelo[campo] = 0
     end
+
+
 end
 
 function contarUsoDaTerra(modelo, espacoCelular, areaCelula)
     inicializarAreas(modelo)
+
+    local conta = 0
 
     forEachCell(espacoCelular, function(celula)
         local campo = mapa_uso_campo[celula.Usos]
         if campo then
             modelo[campo] = modelo[campo] + areaCelula
         end
+
+        conta = conta + 1
+        modelo.altmedia = modelo.altmedia + celula.Alt2
     end)
+
+    modelo.altmedia = modelo.altmedia / conta
 
     modelo.areaTotal = 0
     for _, campo in pairs(mapa_uso_campo) do
@@ -155,7 +164,8 @@ end
 -- ===============================================================
 local projeto = Project {
     file = "recorte.qgs",
-    cell_usos = "data/anil/elevacao_pol.shp",
+    --cell_usos = "data/anil/elevacao_pol.shp",
+    cell_usos = "data/teste1/Recorte_Teste.shp",
     clean = true
 }
 
@@ -169,47 +179,49 @@ local espacoCelular = CellularSpace {
 espacoCelular:createNeighborhood { strategy = "moore", self = false }
 espacoCelular:synchronize()
 
+    -- apagar
+    forEachCell(espacoCelular, function(celula)
+            celula.Alt2 = 0
+    end)
+
+
 -- ===============================================================
 -- MODELO PRINCIPAL
 -- ===============================================================
 ModeloMangue = Model {
     start = 1,
-    finalTime = 88,
+    finalTime = 10,
+
+    altmedia = 0,
 
     areaCelula = 0.09,
     alturaMare = 6, -- altura da maré (Ferreira, 1988)
-    --taxaElevacaoMar = 0.5,  -- so para testar
-    taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
+    taxaElevacaoMar = 0.5,
+    --taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
 
     init = function(modelo)
 
         inicializarAreas(modelo)
 
-       
         modelo.grafico = Chart{
             target = modelo,
             select = {
-                "areaVegetacao",
-                "areaVegetacaoInundada",
-                "areaMangueMigrado"
+                --"areaVegetacao",
+                ---"areaVegetacaoInundada",
+                --"areaMangueMigrado"
+                "altmedia",
             }
         }
-    
 
-
-        modelo.mapaAltitude = mapaAltitude(espacoCelular)
+        --modelo.mapaAltitude = mapaAltitude(espacoCelular)
         modelo.mapaUso = mapaUso(espacoCelular)
 
         modelo.timer = Timer {
             Event {
                 action = function(evento)
                     local tempo = evento:getTime()
-                    print("ITERAÇÃO:", tempo)
+                    --print("ITERAÇÃO:", tempo, modelo.altmedia)
 
-
-                    ---------------------------------------------------------
-                    -- DINÂMICA DO MANGUE
-                    ----------------------------------
                     ----- AUMENTO DE NÍVEL DO MAR
                     local nivelMar = tempo * modelo.taxaElevacaoMar
                     -- no modelo de 2014: Increased_see = cell.Alt2 + (time * Tx_elev) 
@@ -219,74 +231,49 @@ ModeloMangue = Model {
                     local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
                     local taxaAcrecao_m = taxaAcrecao_mm / 1000
 
-                    print (tempo+2012,nivelMar, taxaAcrecao_m)
-
-                    local zonaInfluencia = modelo.alturaMare + nivelMar
+                    --print (tempo+2012,nivelMar)
+                    io.write(tempo + 2012, "\t", nivelMar, "\t")
 
                     forEachCell(espacoCelular, function(celula)
+                        -- AUMENTO DE NÍVEL DO MAR
                         
-                        if ehMarOuInundado(celula.past.Usos) and celula.past.Alt2 >= 0 then
-                            local vizinhosBaixos = 1
+                            local vizinhosBaixos = 1 -- inclui ele mesmo
 
                             forEachNeighbor(celula, function(vizinho)
                                 if vizinho.past.Alt2 < celula.past.Alt2 then
                                     vizinhosBaixos = vizinhosBaixos + 1
                                 end
                             end)
-
+                            --print("VIZINHOS BAIXOS:", vizinhosBaixos)
                             local fluxo = modelo.taxaElevacaoMar / vizinhosBaixos
-                            celula.Alt2 = celula.Alt2 + fluxo
+
+                            --celula.Alt2 = celula.Alt2 + modelo.taxaElevacaoMar                            
 
                             forEachNeighbor(celula, function(vizinho)
                                 if vizinho.past.Alt2 < celula.past.Alt2 then
                                     vizinho.Alt2 = vizinho.Alt2 + fluxo
-
-                                    if not ehMarOuInundado(vizinho.past.Usos) then
-                                        aplicarInundacao(vizinho)
-                                    end
                                 end
                             end)
-                        end
+                            
+                            celula.Alt2 = celula.Alt2 + fluxo
+                            
 
-
-                        if celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_CANAL_FLUVIAL then
-                            forEachNeighbor(celula, function(vizinho)
-                                if (vizinho.Usos == USO_VEGETACAO_TERRESTRE or vizinho.Usos == USO_SOLO_DESCOBERTO)
-                                    and vizinho.ClaseSolos ~= SOLO_MANGUE
-                                    and vizinho.Alt2 <= zonaInfluencia then
-                                    vizinho.ClaseSolos = SOLO_MANGUE_MIGRADO
-                                end
-                            end)
-                        end
-
-                        if celula.Usos == USO_MANGUE then
-                            forEachNeighbor(celula, function(vizinho)
-                                if (vizinho.Usos == USO_VEGETACAO_TERRESTRE or vizinho.Usos == USO_SOLO_DESCOBERTO)
-                                    and vizinho.Alt2 <= zonaInfluencia
-                                    and (vizinho.ClaseSolos == SOLO_MANGUE_MIGRADO or vizinho.ClaseSolos == SOLO_MANGUE) then
-                                    vizinho.Usos = USO_MANGUE_MIGRADO
-                                end
-                            end)
-                        end
-
-                        -- ACRESÇÃO VERTICAL DA LAMA
-                        if (celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_MANGUE_MIGRADO)
-                            and not ehMarOuInundado(celula.Usos) then
-                            celula.Alt2 = celula.Alt2 + taxaAcrecao_m
-                        end
                         
                     end)
 
                     espacoCelular:synchronize()
+                    
                 end
             },
 
             --Event { action = modelo.mapaAltitude },
-            --Event { action = modelo.mapaUso },
+            Event { action = modelo.mapaUso },
 
             Event {
                 action = function(evento)
                     contarUsoDaTerra(modelo, espacoCelular, modelo.areaCelula)
+
+                    print ( modelo.altmedia)
                 end
             },
 
