@@ -1,5 +1,3 @@
-
-
 Elevacao = Model{
 	taxaElevacaoMar = 0.011,
 	alturaMare      =  6, -- altura da maré (Ferreira, 1988)
@@ -27,23 +25,3 @@ Elevacao = Model{
 		}
 	end
 }
-
-
-
-env = Environment{
-	Elevacao{},
-
-}
-
---clean()
-
-chart = Chart{
-	target = env,
-	select = "nivelMar"
-}
-
-env:add(Event{action = chart})
-
---env:add(Event{action = chart})
-
-env:run()
