@@ -167,7 +167,8 @@ Hidrologico = Model {
                     end
                 end)
 
-                local fluxo = model.taxaElevacaoMar / vizinhosBaixos
+                
+                local fluxo = model.taxaElevacaoMar  / vizinhosBaixos
 
                 celula.Alt2 = celula.Alt2 + fluxo
 
@@ -228,8 +229,5 @@ env:add(Event { action = mapaUso })
 --env:add(Event { action = mapaAltitude })
 
 
-env:add(Event { action = function()
-     print("Pressione ENTER para continuar...")
-    io.read() -- aguarda o usuário digitar algo (ENTER já basta)
-end })
+env:add(Event { action = function()   print("Pressione ENTER para continuar...")  io.read() end })
 env:run()
