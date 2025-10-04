@@ -1,4 +1,11 @@
-function Mangue (espacoCelular) 
+
+function ehMarOuInundado(uso, usos_inundados)
+    -- usos_inundados é uma tabela onde a chave é o uso e o valor true
+    return usos_inundados[uso] == true
+end
+
+
+function Mangue (espacoCelular,USOS, usos_inundados, REGRAS_INUNDACAO) 
     
     return   Model {
     start = 1,
@@ -13,50 +20,26 @@ function Mangue (espacoCelular)
 
         --inicializarAreas(modelo)
 
-        print ("oi")
+
 
         modelo.timer = Timer {
             Event {
                 action = function(evento)
                     local tempo = evento:getTime()
                     
-                    local nivelMar = 0
-                    local zonaInfluencia = modelo.alturaMare 
-
-                    forEachCell(espacoCelular, function(celula)
-                        -- AUMENTO DE NÍVEL DO MAR
-                        if ehMarOuInundado(celula.past.Usos) and celula.past.Alt2 >= 0 then
-                            local vizinhosBaixos = 1
-
-                            forEachNeighbor(celula, function(vizinho)
-                                if vizinho.past.Alt2 < celula.past.Alt2 then
-                                    vizinhosBaixos = vizinhosBaixos + 1
-                                end
-                            end)
-
-                            local fluxo = modelo.taxaElevacaoMar / vizinhosBaixos
-                            celula.Alt2 = celula.Alt2 + fluxo
-
-                            forEachNeighbor(celula, function(vizinho)
-                                if vizinho.past.Alt2 < celula.past.Alt2 then
-                                    vizinho.Alt2 = vizinho.Alt2 + fluxo
-
-                                    if not ehMarOuInundado(vizinho.past.Usos) then
-                                        aplicarInundacao(vizinho)
-                                    end
-                                end
-                            end)
-                        end
                         ---------------------------------------------------------
                         -- DINÂMICA DO MANGUE
                         ----------------------------------
-                        --local nivelMar = tempo * modelo.taxaElevacaoMar
-                        nivelMar = tempo * modelo.taxaElevacaoMar
-                        local nivelMar_mm = nivelMar * 1000
-                        local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
-                        local taxaAcrecao_m = taxaAcrecao_mm / 1000
-                        zonaInfluencia = modelo.alturaMare + nivelMar
+                    local nivelMar = tempo * modelo.taxaElevacaoMar
+                    local nivelMar_mm = nivelMar * 1000
+                    local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
+                    local taxaAcrecao_m = taxaAcrecao_mm / 1000
+                     zonaInfluencia = modelo.alturaMare + nivelMar
 
+                    
+
+                    forEachCell(espacoCelular, function(celula)
+          
                         
                         -- acho que faltou aqui olhar para o mangue migrado 
                         -- if celula.ClaseSolos == SOLO_MANGUE  or  celula.ClaseSolos == SOLO_MANGUE_MIGRADO  or  celula.ClaseSolos == SOLO_CANAL_FLUVIAL then
@@ -68,7 +51,6 @@ function Mangue (espacoCelular)
                                     and vizinho.ClaseSolos ~= SOLO_MANGUE
                                     and vizinho.Alt2 <= zonaInfluencia then
                                     vizinho.ClaseSolos = SOLO_MANGUE_MIGRADO
-                                    print ("hhhh")
                                 end
                             end)
                         end
@@ -87,7 +69,7 @@ function Mangue (espacoCelular)
 
                         -- ACREÇÃO VERTICAL DA LAMA
                         if (celula.ClaseSolos == SOLO_MANGUE or celula.ClaseSolos == SOLO_MANGUE_MIGRADO)
-                            and not ehMarOuInundado(celula.Usos) then
+                            and not ehMarOuInundado(celula.Usos,usos_inundados) then
                             -- Duvida: posso somar direto a acreacao_m se ela é um valor acumulado?
                             --celula.Alt2 = celula.Alt2 + taxaAcrecao_m
                         end
@@ -97,18 +79,6 @@ function Mangue (espacoCelular)
                     --espacoCelular:synchronize()
                     print("ITERAÇÃO:", tempo, nivelMar, zonaInfluencia)
 
-                   -- print("Pressione ENTER para continuar...")
-                    --io.read() -- aguarda o usuário digitar algo (ENTER já basta)
-                end
-            },
-
-            --Event { action = modelo.mapaAltitude },
-            --Event { action = modelo.mapaUso },
-            --Event { action = modelo.mapaSolo },
-
-            Event {
-                action = function(evento)
-                    --contarUsoDaTerra(modelo, espacoCelular, modelo.areaCelula)
                 end
             },
 

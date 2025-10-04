@@ -9,6 +9,7 @@
 import("gis")
 
 require("models/mangue")
+require("models/hidro")
 
 -- ===============================================================
 -- CONSTANTES - CLASSES DE USO DA TERRA
@@ -33,44 +34,17 @@ SOLO_MANGUE_MIGRADO = 9
 SOLO_CANAL_FLUVIAL = 0
 
 
--- ===============================================================
--- FUNÇÕES AUXILIARES
--- ===============================================================
-function ehMarOuInundado(uso)
-    return uso == USO_MAR
-        or uso == USO_SOLO_INUNDADO
-        or uso == USO_AREA_ANTROPIZADA_INUNDADA
-        or uso == USO_MANGUE_INUNDADO
-        or uso == USO_VEGETACAO_TERRESTRE_INUNDADA
-end
-
-function aplicarInundacao(celula)
-    local usoAtual = celula.past.Usos
-    if usoAtual == USO_MANGUE then
-        celula.Usos = USO_MANGUE_INUNDADO
-    elseif usoAtual == USO_MANGUE_MIGRADO then -- inclui nos testes
-        celula.Usos = USO_MANGUE_INUNDADO
-    elseif usoAtual == USO_VEGETACAO_TERRESTRE then
-        celula.Usos = USO_VEGETACAO_TERRESTRE_INUNDADA
-    elseif usoAtual == USO_AREA_ANTROPIZADA then
-        celula.Usos = USO_AREA_ANTROPIZADA_INUNDADA
-    elseif usoAtual == USO_SOLO_DESCOBERTO then
-        celula.Usos = USO_SOLO_INUNDADO
-    end
-end
 
 
 function calcularAltMedia(espacoCelular)
     local conta = 0
     local somaArea = 0
-
     forEachCell(espacoCelular, function(celula)
-        if ehMarOuInundado(celula.Usos) then
+  
             somaArea = somaArea + celula.Alt2
             conta = conta + 1
-        end
-    end)
 
+    end)
     return somaArea / conta
 end
 
@@ -216,7 +190,8 @@ espacoCelular:synchronize()
 
 env = Environment {
 
-    hidro = Mangue(espacoCelular, USOS, usos_inundados, REGRAS_INUNDACAO) { taxaElevacaoMar = 0.5 },
+    hidro = Hidro(espacoCelular, USOS, usos_inundados, REGRAS_INUNDACAO) { taxaElevacaoMar = 0.5 },
+    --mangue = Mangue(espacoCelular, USOS, usos_inundados, REGRAS_INUNDACAO) { taxaElevacaoMar = 0.5 },
     
 }
 
@@ -224,11 +199,12 @@ env = Environment {
 
 
 mapaUso = mapaUso(espacoCelular)
---mapaAltitude = mapaAltitude(espacoCelular)
 mapaSolo = mapaSolo(espacoCelular)
 
 env:add(Event { action = mapaUso })
 env:add(Event { action = mapaSolo})
+
+--mapaAltitude = mapaAltitude(espacoCelular)
 --env:add(Event { action = mapaAltitude })
 
 
