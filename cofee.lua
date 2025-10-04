@@ -12,8 +12,6 @@ Coffee = Model{
 		model.temperature =  model.temperature - difference * 0.1
 	end,
 	init = function(model)
-
-
 		model.timer = Timer{
 			Event{action = model},
 		}
