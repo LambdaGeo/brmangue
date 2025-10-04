@@ -162,7 +162,7 @@ Hidrologico = Model {
                 local vizinhosBaixos = 1 -- inclui ele mesmo
 
                 forEachNeighbor(celula, function(vizinho)
-                    if vizinho.past.Alt2 < (celula.past.Alt2 + model.taxaElevacaoMar) then
+                    if vizinho.past.Alt2 < celula.past.Alt2 then
                         vizinhosBaixos = vizinhosBaixos + 1
                     end
                 end)
@@ -172,7 +172,7 @@ Hidrologico = Model {
                 celula.Alt2 = celula.Alt2 + fluxo
 
                 forEachNeighbor(celula, function(vizinho)
-                    if vizinho.past.Alt2 < (celula.past.Alt2 + model.taxaElevacaoMar) then
+                    if vizinho.past.Alt2 < celula.past.Alt2 then
                         vizinho.Alt2 = vizinho.Alt2 + fluxo
 
                         if not ehMarOuInundado(vizinho.past.Usos) then
