@@ -47,8 +47,7 @@ mapa_uso_campo = {
 
 
 
-function calcularAltMedia (modelo, espacoCelular)
-    
+function calcularAltMedia(modelo, espacoCelular)
     local conta = 0
     local somaArea = 0
 
@@ -58,10 +57,7 @@ function calcularAltMedia (modelo, espacoCelular)
     end)
 
     modelo.altmedia = somaArea / conta
-
 end
-
-
 
 -- ===============================================================
 -- CARREGAMENTO DO PROJETO E ESPAÇO CELULAR
@@ -85,80 +81,70 @@ espacoCelular:synchronize()
 
 -- apagar
 forEachCell(espacoCelular, function(celula)
-            celula.Alt2 = 0
+    celula.Alt2 = 0
 end)
 
 
 -- ===============================================================
 -- MODELO PRINCIPAL
 -- ===============================================================
-ModeloMangue = Model {
+Hidrologico = Model {
     start = 1,
     finalTime = 10,
 
-    taxaElevacaoMar = 0.5,
-    --taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
+    taxaElevacaoMar = 0.011,  -- Taxa de elevação do nível do mar (IPCC, 2013)
     altmedia = 0,
 
-    init = function(modelo)
-        
+    execute = function(model, event)
+        local tempo = event:getTime()
 
-        modelo.grafico = Chart{
-            target = modelo,
-            select = {
+        forEachCell(espacoCelular, function(celula)
+            local vizinhosBaixos = 1                 -- inclui ele mesmo
 
-                "altmedia",
-            }
-        }
-
-
-        modelo.timer = Timer {
-            Event {
-                action = function(evento)
-                    local tempo = evento:getTime()
-
-
-                    forEachCell(espacoCelular, function(celula)
-                        -- AUMENTO DE NÍVEL DO MAR
-                        
-                            local vizinhosBaixos = 1 -- inclui ele mesmo
-
-                            forEachNeighbor(celula, function(vizinho)
-                                if vizinho.past.Alt2 < celula.past.Alt2 then
-                                    vizinhosBaixos = vizinhosBaixos + 1
-                                end
-                            end)
-                            --print("VIZINHOS BAIXOS:", vizinhosBaixos)
-                            local fluxo = modelo.taxaElevacaoMar / vizinhosBaixos
-
-
-                            forEachNeighbor(celula, function(vizinho)
-                                if vizinho.past.Alt2 < celula.past.Alt2 then
-                                    vizinho.Alt2 = vizinho.Alt2 + fluxo
-                                end
-                            end)
-                            
-                            celula.Alt2 = celula.Alt2 + fluxo 
-                            
-
-                        
-                    end)
-
-                    espacoCelular:synchronize()
-
-                    calcularAltMedia(modelo, espacoCelular)
-                    print(tempo + 2012, modelo.altmedia)
-                    
+            forEachNeighbor(celula, function(vizinho)
+                if vizinho.past.Alt2 < celula.past.Alt2 then
+                    vizinhosBaixos = vizinhosBaixos + 1
                 end
-            },
+            end)
 
+            local fluxo = model.taxaElevacaoMar / vizinhosBaixos
 
-            Event {
-                start = modelo.start + 1,
-                action = modelo.grafico
-            }
+            forEachNeighbor(celula, function(vizinho)
+                if vizinho.past.Alt2 < celula.past.Alt2 then
+                    vizinho.Alt2 = vizinho.Alt2 + fluxo
+                end
+            end)
+
+            celula.Alt2 = celula.Alt2 + fluxo
+        end)
+
+        espacoCelular:synchronize()
+
+        calcularAltMedia(model, espacoCelular)
+        print(tempo + 2012, model.altmedia)
+    end,
+
+    init = function(model)
+        model.timer = Timer {
+            Event { action = model },
         }
     end
 }
 
-ModeloMangue:run()
+env = Environment{
+	
+    Hidrologico{taxaElevacaoMar=0.5},
+
+}
+
+--clean()
+
+chart = Chart{
+	target = env,
+	select = "altmedia"
+}
+
+env:add(Event{action = chart})
+
+
+env:run()
