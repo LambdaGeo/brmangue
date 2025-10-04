@@ -124,6 +124,38 @@ function mapaAltitude(espacoCelular)
     }
 end
 
+
+---- novos parametros
+
+local USOS = {
+    MANGUE = 1,
+    VEGETACAO_TERRESTRE = 2,
+    MAR = 3,
+    AREA_ANTROPIZADA = 4,
+    SOLO_DESCOBERTO = 5,
+    SOLO_INUNDADO = 6,
+    AREA_ANTROPIZADA_INUNDADA = 7,
+    MANGUE_MIGRADO = 8,
+    MANGUE_INUNDADO = 9,
+    VEGETACAO_TERRESTRE_INUNDADA = 10,
+}
+
+local usos_inundados = {
+    [USOS.MAR] = true,
+    [USOS.SOLO_INUNDADO] = true,
+    [USOS.AREA_ANTROPIZADA_INUNDADA] = true,
+    [USOS.MANGUE_INUNDADO] = true,
+    [USOS.VEGETACAO_TERRESTRE_INUNDADA] = true
+}
+
+local REGRAS_INUNDACAO = {
+    [USOS.MANGUE] = USOS.MANGUE_INUNDADO,
+    [USOS.MANGUE_MIGRADO] = USOS.MANGUE_INUNDADO,
+    [USOS.VEGETACAO_TERRESTRE] = USOS.VEGETACAO_TERRESTRE_INUNDADA,
+    [USOS.AREA_ANTROPIZADA] = USOS.AREA_ANTROPIZADA_INUNDADA,
+    [USOS.SOLO_DESCOBERTO] = USOS.SOLO_INUNDADO
+}
+
 -- ===============================================================
 -- CARREGAMENTO DO PROJETO E ESPAÇO CELULAR
 -- ===============================================================
@@ -151,7 +183,7 @@ espacoCelular:synchronize()
 
 env = Environment {
 
-    hidro = Hidro(espacoCelular) { taxaElevacaoMar = 0.5 },
+    hidro = Hidro(espacoCelular, USOS, usos_inundados, REGRAS_INUNDACAO) { taxaElevacaoMar = 0.5 },
     altmedia = calcularAltMedia(espacoCelular),
 }
 
@@ -176,8 +208,8 @@ env:add(Event { action = function(event)
     end })
 
 forEachCell(espacoCelular, function(celula)
-        celula.Alt2 = 0
-        celula.Usos = USO_MAR
+        --celula.Alt2 = 0
+        --celula.Usos = USO_MAR
 end)
 
 
