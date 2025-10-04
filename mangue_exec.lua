@@ -26,6 +26,14 @@ USO_VEGETACAO_TERRESTRE_INUNDADA = 10
 
 
 -- ===============================================================
+-- CONSTANTES - CLASSES DE SOLO
+-- ===============================================================
+SOLO_MANGUE = 3
+SOLO_MANGUE_MIGRADO = 9
+SOLO_CANAL_FLUVIAL = 0
+
+
+-- ===============================================================
 -- FUNÇÕES AUXILIARES
 -- ===============================================================
 function ehMarOuInundado(uso)
@@ -114,6 +122,31 @@ function mapaUso(espacoCelular)
 end
 
 
+
+function mapaSolo(espacoCelular)
+    return Map {
+        target = espacoCelular,
+        select = "ClaseSolos",
+        value = {
+            SOLO_CANAL_FLUVIAL,
+            SOLO_MANGUE,
+            SOLO_MANGUE_MIGRADO
+            -- adicione aqui outras classes de solo que você tiver definido
+        },
+        color = {
+            { 0,   0,   255 },   -- Canal Fluvial (azul)
+            { 0,   100, 0 },     -- Mangue (verde escuro)
+            { 34,  139, 34 }     -- Mangue Migrado (verde floresta)
+        },
+        label = {
+            "Canal Fluvial",
+            "Mangue",
+            "Mangue Migrado"
+        }
+    }
+end
+
+
 function mapaAltitude(espacoCelular)
     return Map {
         target = espacoCelular,
@@ -192,8 +225,10 @@ env = Environment {
 
 mapaUso = mapaUso(espacoCelular)
 --mapaAltitude = mapaAltitude(espacoCelular)
+mapaSolo = mapaSolo(espacoCelular)
 
 env:add(Event { action = mapaUso })
+env:add(Event { action = mapaSolo})
 --env:add(Event { action = mapaAltitude })
 
 

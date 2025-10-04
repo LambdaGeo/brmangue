@@ -13,7 +13,7 @@ function Mangue (espacoCelular)
 
         --inicializarAreas(modelo)
 
-
+        print ("oi")
 
         modelo.timer = Timer {
             Event {
@@ -68,6 +68,7 @@ function Mangue (espacoCelular)
                                     and vizinho.ClaseSolos ~= SOLO_MANGUE
                                     and vizinho.Alt2 <= zonaInfluencia then
                                     vizinho.ClaseSolos = SOLO_MANGUE_MIGRADO
+                                    print ("hhhh")
                                 end
                             end)
                         end
@@ -93,11 +94,11 @@ function Mangue (espacoCelular)
                         
                     end)
 
-                    espacoCelular:synchronize()
+                    --espacoCelular:synchronize()
                     print("ITERAÇÃO:", tempo, nivelMar, zonaInfluencia)
 
-                    print("Pressione ENTER para continuar...")
-                    io.read() -- aguarda o usuário digitar algo (ENTER já basta)
+                   -- print("Pressione ENTER para continuar...")
+                    --io.read() -- aguarda o usuário digitar algo (ENTER já basta)
                 end
             },
 

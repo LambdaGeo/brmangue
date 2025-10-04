@@ -17,4 +17,10 @@ return {
 		width = 600, 
 		height = 500, 
 	}, 
+	[4] = {
+		x = 250, 
+		y = 250, 
+		width = 600, 
+		height = 500, 
+	}, 
 }

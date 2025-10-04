@@ -310,7 +310,7 @@ ModeloMangue = Model {
                     print("ITERAÇÃO:", tempo, nivelMar, zonaInfluencia)
 
                     print("Pressione ENTER para continuar...")
-                    io.read() -- aguarda o usuário digitar algo (ENTER já basta)
+                    --io.read() -- aguarda o usuário digitar algo (ENTER já basta)
                 end
             },
 
