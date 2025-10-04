@@ -224,8 +224,8 @@ forEachCell(espacoCelular, function(celula)
         math.randomseed(os.time())
 
         local n = math.random(0, 5)
-        celula.Alt2 = n
-        --celula.Usos = USO_MAR
+        --celula.Alt2 = n
+        celula.Usos = USO_MAR
 end)
 
 env:add(Event { action = function()   print("Pressione ENTER para continuar...")  io.read() end })
