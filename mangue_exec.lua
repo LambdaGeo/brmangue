@@ -8,7 +8,7 @@
 -- ===============================================================
 import("gis")
 
-require("models/mangue")
+--require("models/mangue")
 require("models/hidro")
 
 -- ===============================================================
@@ -192,6 +192,8 @@ env = Environment {
 
     hidro = Hidro(espacoCelular, USOS, usos_inundados, REGRAS_INUNDACAO) { taxaElevacaoMar = 0.5 },
     --mangue = Mangue(espacoCelular, USOS, usos_inundados, REGRAS_INUNDACAO) { taxaElevacaoMar = 0.5 },
+
+    altmedia = calcularAltMedia(espacoCelular),
     
 }
 
@@ -212,7 +214,16 @@ env:add(Event { action = mapaSolo})
 
 env:add(Event { action = function() espacoCelular:synchronize() end })
 
+env:add(Event { action = function(event) 
+    env.altmedia = calcularAltMedia(espacoCelular)
+    print("Altura média do mar: ", event:getTime(), env.altmedia)
 
+    end })
+
+forEachCell(espacoCelular, function(celula)
+        celula.Alt2 = 0
+        celula.Usos = USO_MAR
+end)
 
 env:run()
 

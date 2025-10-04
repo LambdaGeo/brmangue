@@ -34,7 +34,7 @@ function Hidro (cs, USOS, usos_inundados, REGRAS_INUNDACAO)
                 local vizinhosBaixos = 1 -- inclui ele mesmo
 
                 forEachNeighbor(celula, function(vizinho)
-                    if vizinho.past.Alt2 < celula.past.Alt2 then
+                    if vizinho.past.Alt2 <= celula.past.Alt2  then -- <= para testar a distribuicao
                         vizinhosBaixos = vizinhosBaixos + 1
                     end
                 end)
@@ -44,8 +44,10 @@ function Hidro (cs, USOS, usos_inundados, REGRAS_INUNDACAO)
 
                 celula.Alt2 = celula.Alt2 + fluxo
 
+                --print (vizinhosBaixos)
+
                 forEachNeighbor(celula, function(vizinho)
-                    if vizinho.past.Alt2 < celula.past.Alt2 then
+                    if vizinho.past.Alt2 <= celula.past.Alt2   then
                         vizinho.Alt2 = vizinho.Alt2 + fluxo
 
                         if not ehMarOuInundado(vizinho.past.Usos, usos_inundados)  then
