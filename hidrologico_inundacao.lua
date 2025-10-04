@@ -49,18 +49,18 @@ function aplicarInundacao(celula)
     end
 end
 
-function calcularAltMedia(modelo, espacoCelular)
+function calcularAltMedia(espacoCelular)
     local conta = 0
     local somaArea = 0
 
     forEachCell(espacoCelular, function(celula)
-        if ehMarOuInundado(celula.past.Usos) then
+        if ehMarOuInundado(celula.Usos) then
             somaArea = somaArea + celula.Alt2
             conta = conta + 1
         end
     end)
 
-    modelo.altmedia = somaArea / conta
+    return somaArea / conta
 end
 
 
@@ -110,6 +110,17 @@ function mapaUso(espacoCelular)
     }
 end
 
+
+function mapaAltitude(espacoCelular)
+    return Map {
+        target = espacoCelular,
+        select = "Alt2",
+        color = "RdYlGn",
+        slices = 10,
+        size = 1
+    }
+end
+
 -- ===============================================================
 -- CARREGAMENTO DO PROJETO E ESPAÇO CELULAR
 -- ===============================================================
@@ -141,7 +152,7 @@ Hidrologico = Model {
     finalTime = 10,
 
     taxaElevacaoMar = 0.011, -- Taxa de elevação do nível do mar (IPCC, 2013)
-    altmedia = 0,
+    altmedia = calcularAltMedia(espacoCelular),
 
     execute = function(model, event)
         local tempo = event:getTime()
@@ -151,15 +162,17 @@ Hidrologico = Model {
                 local vizinhosBaixos = 1 -- inclui ele mesmo
 
                 forEachNeighbor(celula, function(vizinho)
-                    if vizinho.past.Alt2 < celula.past.Alt2 then
+                    if vizinho.past.Alt2 < (celula.past.Alt2 + model.taxaElevacaoMar) then
                         vizinhosBaixos = vizinhosBaixos + 1
                     end
                 end)
 
                 local fluxo = model.taxaElevacaoMar / vizinhosBaixos
 
+                celula.Alt2 = celula.Alt2 + fluxo
+
                 forEachNeighbor(celula, function(vizinho)
-                    if vizinho.past.Alt2 < celula.past.Alt2 then
+                    if vizinho.past.Alt2 < (celula.past.Alt2 + model.taxaElevacaoMar) then
                         vizinho.Alt2 = vizinho.Alt2 + fluxo
 
                         if not ehMarOuInundado(vizinho.past.Usos) then
@@ -168,13 +181,13 @@ Hidrologico = Model {
                     end
                 end)
 
-                celula.Alt2 = celula.Alt2 + fluxo
+                
             end
         end)
 
         espacoCelular:synchronize()
 
-        calcularAltMedia(model, espacoCelular)
+        model.altmedia = calcularAltMedia(espacoCelular)
         print(tempo + 2012, model.altmedia)
     end,
 
@@ -209,7 +222,14 @@ chart = Chart {
 env:add(Event { action = chart })
 
 mapaUso = mapaUso(espacoCelular)
+--mapaAltitude = mapaAltitude(espacoCelular)
 
 env:add(Event { action = mapaUso })
+--env:add(Event { action = mapaAltitude })
 
+
+env:add(Event { action = function()
+     print("Pressione ENTER para continuar...")
+    io.read() -- aguarda o usuário digitar algo (ENTER já basta)
+end })
 env:run()
