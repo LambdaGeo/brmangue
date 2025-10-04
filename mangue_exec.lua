@@ -206,11 +206,10 @@ mapaSolo = mapaSolo(espacoCelular)
 env:add(Event { action = mapaUso })
 env:add(Event { action = mapaSolo})
 
---mapaAltitude = mapaAltitude(espacoCelular)
---env:add(Event { action = mapaAltitude })
+mapaAltitude = mapaAltitude(espacoCelular)
+env:add(Event { action = mapaAltitude })
 
 
---env:add(Event { action = function()   print("Pressione ENTER para continuar...")  io.read() end })
 
 env:add(Event { action = function() espacoCelular:synchronize() end })
 
@@ -221,10 +220,15 @@ env:add(Event { action = function(event)
     end })
 
 forEachCell(espacoCelular, function(celula)
-        celula.Alt2 = 0
-        celula.Usos = USO_MAR
+        --celula.Alt2 = 0
+        math.randomseed(os.time())
+
+        local n = math.random(0, 5)
+        celula.Alt2 = n
+        --celula.Usos = USO_MAR
 end)
 
+env:add(Event { action = function()   print("Pressione ENTER para continuar...")  io.read() end })
 env:run()
 
 
