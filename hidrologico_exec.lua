@@ -52,6 +52,19 @@ function aplicarInundacao(celula)
 end
 
 
+function calcularAltMedia(espacoCelular)
+    local conta = 0
+    local somaArea = 0
+
+    forEachCell(espacoCelular, function(celula)
+        if ehMarOuInundado(celula.Usos) then
+            somaArea = somaArea + celula.Alt2
+            conta = conta + 1
+        end
+    end)
+
+    return somaArea / conta
+end
 
 
 -- ===============================================================
@@ -139,17 +152,11 @@ espacoCelular:synchronize()
 env = Environment {
 
     hidro = Hidro(espacoCelular) { taxaElevacaoMar = 0.5 },
-
+    altmedia = calcularAltMedia(espacoCelular),
 }
 
---clean()
 
-chart = Chart {
-    target = env,
-    select = "altmedia"
-}
 
-env:add(Event { action = chart })
 
 mapaUso = mapaUso(espacoCelular)
 --mapaAltitude = mapaAltitude(espacoCelular)
@@ -160,10 +167,20 @@ env:add(Event { action = mapaUso })
 
 --env:add(Event { action = function()   print("Pressione ENTER para continuar...")  io.read() end })
 
+env:add(Event { action = function() espacoCelular:synchronize() end })
+
+env:add(Event { action = function(event) 
+    env.altmedia = calcularAltMedia(espacoCelular)
+    print("Altura média do mar: ", event:getTime(), env.altmedia)
+
+    end })
+
 forEachCell(espacoCelular, function(celula)
-            celula.Alt2 = 0
-            celula.Usos = USO_MAR
+        celula.Alt2 = 0
+        celula.Usos = USO_MAR
 end)
-espacoCelular:synchronize()
+
 
 env:run()
+
+

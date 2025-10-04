@@ -1,18 +1,6 @@
 
 
-function calcularAltMedia(espacoCelular)
-    local conta = 0
-    local somaArea = 0
 
-    forEachCell(espacoCelular, function(celula)
-        if ehMarOuInundado(celula.Usos) then
-            somaArea = somaArea + celula.Alt2
-            conta = conta + 1
-        end
-    end)
-
-    return somaArea / conta
-end
 
 
 -- ===============================================================
@@ -25,7 +13,7 @@ function Hidro (cs)
     finalTime = 20,
 
     taxaElevacaoMar = 0.011, -- Taxa de elevação do nível do mar (IPCC, 2013)
-    altmedia = 0,
+ 
     
 
     execute = function(model, event)
@@ -58,20 +46,17 @@ function Hidro (cs)
 
                 
             --end
+
+            --cs:synchronize() 
         end)
 
-        cs:synchronize()
-        model.altmedia = calcularAltMedia(cs)
+   
 
-
-        print(tempo + 2012, model.altmedia)
     end,
 
     init = function(model)
         -- testar o aumento da altitude
         model.altmedia = calcularAltMedia(cs)
-
-       print (cs, model.altmedia)
 
     end
 }
