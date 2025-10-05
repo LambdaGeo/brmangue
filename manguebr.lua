@@ -1,102 +1,23 @@
+-- ===============================================================
 -- IMPACTOS DA ELEVAÇÃO DO NÍVEL DO MAR EM ECOSSISTEMAS DE MANGUE
 -- ESTUDO DE CASO: REENTRÂNCIAS MARANHENSES
 -- AUTOR: Denilson da Silva Bezerra
 -- REVISADO E REESTRUTURADO POR: Sergio Souza Costa
+-- ===============================================================
 
 -- ===============================================================
 -- IMPORTAÇÃO DE BIBLIOTECAS
 -- ===============================================================
-import("gis")
+import("gis")  -- Biblioteca principal para GIS
 
-require("models/mangue")
-require("models/hidro")
-
-
--- ===============================================================
--- CONSTANTES - CLASSES DE SOLO
--- ===============================================================
-SOLO_MANGUE = 3
-SOLO_MANGUE_MIGRADO = 9
-SOLO_CANAL_FLUVIAL = 0
-
-
-
-
-function calcularAltMedia(espacoCelular)
-    local conta = 0
-    local somaArea = 0
-    forEachCell(espacoCelular, function(celula)
-  
-            somaArea = somaArea + celula.Alt2
-            conta = conta + 1
-
-    end)
-    return somaArea / conta
-end
-
+require("models/mangue")       -- Modelo de dinâmica de mangue
+require("models/hidro")        -- Modelo de hidrologia
+require("models/utils")        -- Funções utilitárias
+require("visualization/maps")  -- Visualização e mapeamento
 
 -- ===============================================================
--- FUNÇÃO DE VISUALIZAÇÃO DOS MAPAS
+-- DEFINIÇÃO DAS CLASSES DE USO DA TERRA
 -- ===============================================================
-function mapaUso(espacoCelular, usos)
-    local valores, cores, rotulos = {}, {}, {}
-
-    for _, uso in pairs(usos) do
-        table.insert(valores, uso.valor)
-        table.insert(cores, uso.cor)
-        table.insert(rotulos, uso.nome)
-    end
-
-    return Map {
-        target = espacoCelular,
-        select = "Usos",
-        value = valores,
-        color = cores,
-        label = rotulos
-    }
-end
-
-
-
-function mapaSolo(espacoCelular)
-    return Map {
-        target = espacoCelular,
-        select = "ClaseSolos",
-        value = {
-            SOLO_CANAL_FLUVIAL,
-            SOLO_MANGUE,
-            SOLO_MANGUE_MIGRADO
-            -- adicione aqui outras classes de solo que você tiver definido
-        },
-        color = {
-            { 0,   0,   255 },   -- Canal Fluvial (azul)
-            { 0,   100, 0 },     -- Mangue (verde escuro)
-            { 34,  139, 34 }     -- Mangue Migrado (verde floresta)
-        },
-        label = {
-            "Canal Fluvial",
-            "Mangue",
-            "Mangue Migrado"
-        }
-    }
-end
-
-
-function mapaAltitude(espacoCelular)
-    return Map {
-        target = espacoCelular,
-        select = "Alt2",
-        color = "RdYlGn",
-        slices = 10,
-        size = 1
-    }
-end
-
-
----- novos parametros
----
---
-
 tabela_usos = {
     MANGUE = { valor = 1, cor = {0, 100, 0}, nome = "Mangue" },
     VEGETACAO_TERRESTRE = { valor = 2, cor = {128, 128, 0}, nome = "Vegetação Terrestre" },
@@ -110,8 +31,10 @@ tabela_usos = {
     VEGETACAO_TERRESTRE_INUNDADA = { valor = 10, cor = {0, 0, 0}, nome = "Vegetação Terrestre Inundada" }
 }
 
-
-
+-- ===============================================================
+-- DEFINIÇÃO DE USOS INUNDADOS
+-- ===============================================================
+-- Tabela para identificar rapidamente quais usos da terra são afetados por inundação
 local usos_inundados = {
     [tabela_usos.MAR.valor] = true,
     [tabela_usos.SOLO_INUNDADO.valor] = true,
@@ -120,6 +43,10 @@ local usos_inundados = {
     [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
 }
 
+-- ===============================================================
+-- REGRAS DE INUNDAÇÃO
+-- ===============================================================
+-- Define a transformação de um uso da terra para seu estado inundado correspondente
 local regras_inundacao = {
     [tabela_usos.MANGUE.valor] = tabela_usos.MANGUE_INUNDADO.valor,
     [tabela_usos.MANGUE_MIGRADO.valor] = tabela_usos.MANGUE_INUNDADO.valor,
@@ -129,71 +56,80 @@ local regras_inundacao = {
 }
 
 -- ===============================================================
+-- DEFINIÇÃO DE TIPOS DE SOLO
+-- ===============================================================
+tabela_solos = {
+    CANAL_FLUVIAL = { valor = 0, cor = {0,0,255}, nome = "Canal Fluvial" },
+    MANGUE = { valor = 3, cor = {0,100,0}, nome = "Mangue" },
+    MANGUE_MIGRADO = { valor = 9, cor = {34,139,34}, nome = "Mangue Migrado" }
+}
+
+-- ===============================================================
 -- CARREGAMENTO DO PROJETO E ESPAÇO CELULAR
 -- ===============================================================
 local projeto = Project {
-    file = "recorte.qgs",
-    --cell_usos = "data/anil/elevacao_pol.shp",
+    file = "recorte.qgs",  -- Arquivo do projeto QGIS
+    --cell_usos = "data/anil/elevacao_pol.shp",  -- Opção alternativa
     cell_usos = "data/teste_dinamica/Recorte_Teste.shp",
     clean = true
 }
 
+-- Criação do espaço celular
 local espacoCelular = CellularSpace {
     project = projeto,
     layer = "cell_usos",
-    xy = { "Col", "Lin" },
-    select = { "ClaseSolos", "Alt2", "Usos" }
+    xy = { "Col", "Lin" },                  -- Colunas e linhas do shapefile
+    select = { "ClaseSolos", "Alt2", "Usos" } -- Campos a serem importados
 }
 
+-- Criação da vizinhança de Moore
 espacoCelular:createNeighborhood { strategy = "moore", self = false }
 
+-- Sincroniza atributos das células
 espacoCelular:synchronize()
 
-
-
-
-
+-- ===============================================================
+-- AMBIENTE DE SIMULAÇÃO
+-- ===============================================================
 env = Environment {
 
-    --hidro = Hidro(espacoCelular, usos_inundados, regras_inundacao) { taxaElevacaoMar = 0.5 },
-    mangue = Mangue(espacoCelular, tabela_usos) { taxaElevacaoMar = 0.5 },
+    -- Modelos que compõem o ambiente
+    hidro = Hidro(espacoCelular, usos_inundados, regras_inundacao) { taxaElevacaoMar = 0.5 },
+    mangue = Mangue(espacoCelular, tabela_usos, tabela_solos) { taxaElevacaoMar = 0.5 },
 
-    altmedia = calcularAltMedia(espacoCelular),
-    
+    -- Cálculo inicial de altitude média das células
+    CalcularAltitudeMedia(espacoCelular){}
 }
 
-
-
-mapaUso = mapaUso(espacoCelular, tabela_usos)
---mapaUso = mapaUso2(espacoCelular)
-mapaSolo = mapaSolo(espacoCelular)
-
+-- ===============================================================
+-- MAPAS E VISUALIZAÇÃO
+-- ===============================================================
+mapaUso = mapaUso(espacoCelular, tabela_usos, "Usos")
 env:add(Event { action = mapaUso })
-env:add(Event { action = mapaSolo})
+
+mapaSolo = mapaSolo(espacoCelular, tabela_solos, "ClaseSolos")
+env:add(Event { action = mapaSolo })
 
 mapaAltitude = mapaAltitude(espacoCelular)
 env:add(Event { action = mapaAltitude })
 
-
-
+-- Sincronização periódica do espaço celular
 env:add(Event { action = function() espacoCelular:synchronize() end })
 
-env:add(Event { action = function(event) 
-    env.altmedia = calcularAltMedia(espacoCelular)
-    print("Altura média do mar: ", event:getTime(), env.altmedia)
-
-    end })
-
+-- ===============================================================
+-- INICIALIZAÇÃO DAS CÉLULAS
+-- ===============================================================
 forEachCell(espacoCelular, function(celula)
-        --celula.Alt2 = 0
-        math.randomseed(os.time())
+    -- Inicializa a semente aleatória para cada célula
+    math.randomseed(os.time())
 
-        local n = math.random(0, 5)
-        --celula.Alt2 = n
-        --celula.Usos = USO_MAR
+    local n = math.random(0, 5)  -- Valor aleatório de teste (pode ser usado para Alt2)
+    --celula.Alt2 = n
+    --celula.Usos = USO_MAR
 end)
 
---env:add(Event { action = function()   print("Pressione ENTER para continuar...")  io.read() end })
+-- ===============================================================
+-- EXECUÇÃO DA SIMULAÇÃO
+-- ===============================================================
+--env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
 env:run()
-
-

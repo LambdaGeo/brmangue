@@ -5,7 +5,7 @@ function ehMarOuInundado(uso, usos_inundados)
 end
 
 
-function Mangue(espacoCelular, tabela_usos)
+function Mangue(espacoCelular, tabela_usos, tabela_solos)
     return Model {
         start = 1,
         finalTime = 100,
@@ -31,16 +31,16 @@ function Mangue(espacoCelular, tabela_usos)
                 ---------------------------------------------------------
                 -- MIGRAÇÃO DE SOLOS
                 ---------------------------------------------------------
-                if celula.past.ClaseSolos == tabela_usos.MANGUE.valor
-                    or celula.past.ClaseSolos == tabela_usos.MANGUE_MIGRADO.valor
-                    or celula.past.ClaseSolos == tabela_usos.MAR.valor then
+                if celula.past.ClaseSolos == tabela_solos.MANGUE.valor
+                    or celula.past.ClaseSolos == tabela_solos.MANGUE_MIGRADO.valor
+                    or celula.past.ClaseSolos == tabela_solos.CANAL_FLUVIAL.valor then
 
                     forEachNeighbor(celula, function(vizinho)
                         if (vizinho.Usos == tabela_usos.VEGETACAO_TERRESTRE.valor
                             or vizinho.Usos == tabela_usos.SOLO_DESCOBERTO.valor)
-                            and vizinho.ClaseSolos ~= tabela_usos.MANGUE.valor
+                            and vizinho.ClaseSolos ~= tabela_solos.MANGUE.valor
                             and vizinho.Alt2 <= zonaInfluencia then
-                            vizinho.ClaseSolos = tabela_usos.MANGUE_MIGRADO.valor
+                            vizinho.ClaseSolos = tabela_solos.MANGUE_MIGRADO.valor
                         end
                     end)
                 end
@@ -55,8 +55,8 @@ function Mangue(espacoCelular, tabela_usos)
                         if (vizinho.Usos == tabela_usos.VEGETACAO_TERRESTRE.valor
                             or vizinho.Usos == tabela_usos.SOLO_DESCOBERTO.valor)
                             and vizinho.Alt2 <= zonaInfluencia
-                            and (vizinho.ClaseSolos == tabela_usos.MANGUE_MIGRADO.valor
-                                or vizinho.ClaseSolos == tabela_usos.MANGUE.valor) then
+                            and (vizinho.ClaseSolos == tabela_solos.MANGUE_MIGRADO.valor
+                                or vizinho.ClaseSolos == tabela_solos.MANGUE.valor) then
                             vizinho.Usos = tabela_usos.MANGUE_MIGRADO.valor
                         end
                     end)
@@ -73,7 +73,7 @@ function Mangue(espacoCelular, tabela_usos)
                 end
             end)
 
-            print("ITERAÇÃO:", tempo, nivelMar, zonaInfluencia)
+            --print("ITERAÇÃO:", tempo, nivelMar, zonaInfluencia)
         end,
 
         init = function(model)
