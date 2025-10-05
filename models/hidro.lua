@@ -29,7 +29,7 @@ function Hidro(cs, usos_inundados, regras_inundacao)
 
     return Model {
         start = 1,
-        finalTime = 20,  -- Duração da simulação em passos de tempo
+        finalTime = 100,  -- Duração da simulação em passos de tempo
 
         taxaElevacaoMar = 0.011, -- Taxa de elevação do nível do mar (IPCC, 2013)
 
