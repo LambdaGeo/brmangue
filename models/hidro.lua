@@ -16,7 +16,9 @@ end
 -- ===============================================================
 -- MODELO PRINCIPAL
 -- ===============================================================
-function Hidro (cs, USOS, usos_inundados, REGRAS_INUNDACAO) 
+function Hidro (cs, usos_inundados, regras_inundacao) 
+
+
     
     return Model {
     start = 1,
@@ -51,7 +53,7 @@ function Hidro (cs, USOS, usos_inundados, REGRAS_INUNDACAO)
                         vizinho.Alt2 = vizinho.Alt2 + fluxo
 
                         if not ehMarOuInundado(vizinho.past.Usos, usos_inundados)  then
-                            aplicarInundacao(vizinho, REGRAS_INUNDACAO)
+                            aplicarInundacao(vizinho, regras_inundacao)
                         end
                     end
                 end)
@@ -63,12 +65,7 @@ function Hidro (cs, USOS, usos_inundados, REGRAS_INUNDACAO)
     end,
 
     init = function(model)
-        
-
-        model.timer = Timer {
-            Event { action = model },
-        }
-
+        model.timer = Timer { Event { action = model } }
     end
 }
 end

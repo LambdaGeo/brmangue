@@ -8,7 +8,7 @@
 -- ===============================================================
 import("gis")
 
---require("models/mangue")
+require("models/mangue")
 require("models/hidro")
 
 
@@ -110,33 +110,22 @@ tabela_usos = {
     VEGETACAO_TERRESTRE_INUNDADA = { valor = 10, cor = {0, 0, 0}, nome = "Vegetação Terrestre Inundada" }
 }
 
-local USOS = {
-    MANGUE = 1,
-    VEGETACAO_TERRESTRE = 2,
-    MAR = 3,
-    AREA_ANTROPIZADA = 4,
-    SOLO_DESCOBERTO = 5,
-    SOLO_INUNDADO = 6,
-    AREA_ANTROPIZADA_INUNDADA = 7,
-    MANGUE_MIGRADO = 8,
-    MANGUE_INUNDADO = 9,
-    VEGETACAO_TERRESTRE_INUNDADA = 10,
-}
+
 
 local usos_inundados = {
-    [USOS.MAR] = true,
-    [USOS.SOLO_INUNDADO] = true,
-    [USOS.AREA_ANTROPIZADA_INUNDADA] = true,
-    [USOS.MANGUE_INUNDADO] = true,
-    [USOS.VEGETACAO_TERRESTRE_INUNDADA] = true
+    [tabela_usos.MAR.valor] = true,
+    [tabela_usos.SOLO_INUNDADO.valor] = true,
+    [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor] = true,
+    [tabela_usos.MANGUE_INUNDADO.valor] = true,
+    [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
 }
 
-local REGRAS_INUNDACAO = {
-    [USOS.MANGUE] = USOS.MANGUE_INUNDADO,
-    [USOS.MANGUE_MIGRADO] = USOS.MANGUE_INUNDADO,
-    [USOS.VEGETACAO_TERRESTRE] = USOS.VEGETACAO_TERRESTRE_INUNDADA,
-    [USOS.AREA_ANTROPIZADA] = USOS.AREA_ANTROPIZADA_INUNDADA,
-    [USOS.SOLO_DESCOBERTO] = USOS.SOLO_INUNDADO
+local regras_inundacao = {
+    [tabela_usos.MANGUE.valor] = tabela_usos.MANGUE_INUNDADO.valor,
+    [tabela_usos.MANGUE_MIGRADO.valor] = tabela_usos.MANGUE_INUNDADO.valor,
+    [tabela_usos.VEGETACAO_TERRESTRE.valor] = tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor,
+    [tabela_usos.AREA_ANTROPIZADA.valor] = tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor,
+    [tabela_usos.SOLO_DESCOBERTO.valor] = tabela_usos.SOLO_INUNDADO.valor
 }
 
 -- ===============================================================
@@ -166,8 +155,8 @@ espacoCelular:synchronize()
 
 env = Environment {
 
-    hidro = Hidro(espacoCelular, USOS, usos_inundados, REGRAS_INUNDACAO) { taxaElevacaoMar = 0.5 },
-    --mangue = Mangue(espacoCelular, USOS, usos_inundados, REGRAS_INUNDACAO) { taxaElevacaoMar = 0.5 },
+    --hidro = Hidro(espacoCelular, usos_inundados, regras_inundacao) { taxaElevacaoMar = 0.5 },
+    mangue = Mangue(espacoCelular, tabela_usos) { taxaElevacaoMar = 0.5 },
 
     altmedia = calcularAltMedia(espacoCelular),
     
