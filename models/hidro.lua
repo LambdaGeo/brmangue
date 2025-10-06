@@ -12,11 +12,11 @@ end
 -- Aplica a regra de inundação a uma célula, se houver regra definida
 -- @param celula: célula do espaço celular
 -- @param regras: tabela de regras de inundação (uso -> uso inundado)
--- @param nomeAtributoUso: nome do atributo de uso da célula (ex: "Usos")
-function aplicarInundacao(celula, regras, nomeAtributoUso)
-    local usoAtual = celula.past[nomeAtributoUso]
+-- @param attrUso: nome do atributo de uso da célula (ex: "Usos")
+function aplicarInundacao(celula, regras, attrUso)
+    local usoAtual = celula.past[attrUso]
     if regras[usoAtual] then
-        celula[nomeAtributoUso] = regras[usoAtual]
+        celula[attrUso] = regras[usoAtual]
     end
 end
 
@@ -24,52 +24,54 @@ end
 -- ===============================================================
 -- MODELO DE HIDROLOGIA (Hidro)
 -- ===============================================================
--- Este modelo simula os impactos da elevação do nível do mar sobre a altimetria e uso da terra.
--- Os parâmetros nomeAtributoUso e nomeAtributoAltimetria permitem generalizar o modelo
--- para diferentes estruturas de dados no espaço celular.
+-- Simula os impactos da elevação do nível do mar sobre a altimetria
+-- e o uso da terra, de forma generalizável para diferentes modelos.
 --
 -- @param cs: espaço celular
 -- @param usos_inundados: tabela de usos considerados inundados
--- @param regras_inundacao: regras de transformação de uso (uso -> uso_inundado)
--- @param nomeAtributoUso: nome do atributo de uso da célula (ex: "Usos")
--- @param nomeAtributoAltimetria: nome do atributo de altimetria (ex: "Alt2")
-function Hidro(cs, usos_inundados, regras_inundacao, nomeAtributoUso, nomeAtributoAltimetria)
+-- @param regras_inundacao: tabela de transformações (uso -> uso_inundado)
+-- @param nomes_atributos: tabela com os nomes dos atributos da célula:
+--        { uso = "Usos", alt = "Alt2" }
+function Hidro(cs, usos_inundados, regras_inundacao, nomes_atributos)
 
     return Model {
         start = 1,
-        finalTime = 100,  -- duração da simulação (em passos de tempo)
+        finalTime = 100,
         taxaElevacaoMar = 0.011,  -- taxa média anual (m/ano) — IPCC, 2013
 
         -- ===========================================================
-        -- FUNÇÃO DE EXECUÇÃO (executada a cada passo da simulação)
+        -- EXECUÇÃO (a cada passo da simulação)
         -- ===========================================================
         execute = function(model, event)
             local tempo = event:getTime()
 
             -----------------------------------------------------------
-            -- Validação dos parâmetros de atributos
+            -- Validação dos parâmetros
             -----------------------------------------------------------
-            if not nomeAtributoUso or nomeAtributoUso == "" then
-                error("Parâmetro 'nomeAtributoUso' não informado. Informe o nome do atributo de uso.")
+            local attrUso = nomes_atributos.uso
+            local attrAlt = nomes_atributos.alt
+
+            if not attrUso or attrUso == "" then
+                error("Campo 'uso' ausente em nomes_atributos.")
             end
-            if not nomeAtributoAltimetria or nomeAtributoAltimetria == "" then
-                error("Parâmetro 'nomeAtributoAltimetria' não informado. Informe o nome do atributo de altimetria.")
+            if not attrAlt or attrAlt == "" then
+                error("Campo 'alt' ausente em nomes_atributos.")
             end
 
             local primeiraCelula = cs.cells[1]
-            if primeiraCelula.past[nomeAtributoUso] == nil then
-                error("Atributo '" .. nomeAtributoUso .. "' não existe no espaço celular.")
+            if primeiraCelula.past[attrUso] == nil then
+                error("Atributo '" .. attrUso .. "' não existe no espaço celular.")
             end
-            if primeiraCelula.past[nomeAtributoAltimetria] == nil then
-                error("Atributo '" .. nomeAtributoAltimetria .. "' não existe no espaço celular.")
+            if primeiraCelula.past[attrAlt] == nil then
+                error("Atributo '" .. attrAlt .. "' não existe no espaço celular.")
             end
 
             -----------------------------------------------------------
             -- Dinâmica hidrológica: elevação e propagação da inundação
             -----------------------------------------------------------
             forEachCell(cs, function(celula)
-                local usoAtual = celula.past[nomeAtributoUso]
-                local altAtual = celula.past[nomeAtributoAltimetria]
+                local usoAtual = celula.past[attrUso]
+                local altAtual = celula.past[attrAlt]
 
                 -- Se for mar ou uso inundado e altitude válida
                 if ehMarOuInundado(usoAtual, usos_inundados) and altAtual >= 0 then
@@ -77,7 +79,7 @@ function Hidro(cs, usos_inundados, regras_inundacao, nomeAtributoUso, nomeAtribu
 
                     -- Conta vizinhos com altitude menor ou igual
                     forEachNeighbor(celula, function(vizinho)
-                        if vizinho.past[nomeAtributoAltimetria] <= altAtual then
+                        if vizinho.past[attrAlt] <= altAtual then
                             vizinhosBaixos = vizinhosBaixos + 1
                         end
                     end)
@@ -86,16 +88,16 @@ function Hidro(cs, usos_inundados, regras_inundacao, nomeAtributoUso, nomeAtribu
                     local fluxo = model.taxaElevacaoMar / vizinhosBaixos
 
                     -- Atualiza a célula atual
-                    celula[nomeAtributoAltimetria] = celula[nomeAtributoAltimetria] + fluxo
+                    celula[attrAlt] = celula[attrAlt] + fluxo
 
                     -- Propaga o fluxo para os vizinhos baixos
                     forEachNeighbor(celula, function(vizinho)
-                        if vizinho.past[nomeAtributoAltimetria] <= altAtual then
-                            vizinho[nomeAtributoAltimetria] = vizinho[nomeAtributoAltimetria] + fluxo
+                        if vizinho.past[attrAlt] <= altAtual then
+                            vizinho[attrAlt] = vizinho[attrAlt] + fluxo
 
                             -- Se o vizinho ainda não está inundado, aplica a regra
-                            if not ehMarOuInundado(vizinho.past[nomeAtributoUso], usos_inundados) then
-                                aplicarInundacao(vizinho, regras_inundacao, nomeAtributoUso)
+                            if not ehMarOuInundado(vizinho.past[attrUso], usos_inundados) then
+                                aplicarInundacao(vizinho, regras_inundacao, attrUso)
                             end
                         end
                     end)

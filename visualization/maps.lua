@@ -43,10 +43,10 @@ end
 
 
 
-function mapaAltitude(espacoCelular)
+function mapaAltitude(espacoCelular,select)
     return Map {
         target = espacoCelular,
-        select = "Alt2",
+        select = select,
         color = "RdYlGn",
         slices = 10,
         size = 1
