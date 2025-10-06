@@ -9,13 +9,55 @@ function ehMarOuInundado(uso, usos_inundados)
     return usos_inundados[uso] == true
 end
 
+
+---------------------------------------------------------
+-- FUNÇÃO GERAL DE MIGRAÇÃO DE SOLOS
+---------------------------------------------------------
+function migrarSolos(celula, tabela_usos, tabela_solos, params, zonaInfluencia)
+    -- Parâmetros esperados:
+    -- params.origens: solos que podem gerar migração
+    -- params.alvos: usos que permitem receber migração
+    -- params.soloDestino: tipo de solo migrado
+    -- params.zonaInfluencia: limite de altitude para migração
+
+    if params.origens[celula.past.ClaseSolos] then
+        forEachNeighbor(celula, function(vizinho)
+            if params.alvos[vizinho.Usos]
+                and vizinho.ClaseSolos ~= params.soloDestino
+                and vizinho.Alt2 <= zonaInfluencia then
+                vizinho.ClaseSolos = params.soloDestino
+            end
+        end)
+    end
+end
+
+---------------------------------------------------------
+-- FUNÇÃO GERAL DE MIGRAÇÃO DE USOS
+---------------------------------------------------------
+function migrarUsos(celula, tabela_usos, tabela_solos, params, zonaInfluencia)
+    -- params.origens: usos que podem causar migração
+    -- params.alvos: usos vizinhos que podem mudar
+    -- params.condSolos: solos que permitem a mudança
+    -- params.usoDestino: novo uso a ser atribuído
+    -- params.zonaInfluencia: limite de altitude
+    if params.origens[celula.past.Usos] then
+        forEachNeighbor(celula, function(vizinho)
+            if params.alvos[vizinho.Usos] and 
+                vizinho.Alt2 <= zonaInfluencia and 
+                params.condSolos[vizinho.ClaseSolos] then
+                vizinho.Usos = params.usoDestino
+            end
+        end)
+    end
+end
+
 -- ===============================================================
 -- MODELO DE DINÂMICA DE MANGUE
 -- ===============================================================
 -- @param espacoCelular: espaço celular da simulação
 -- @param tabela_usos: tabela com classes de uso da terra
 -- @param tabela_solos: tabela com tipos de solo
-function Mangue(espacoCelular, tabela_usos, tabela_solos)
+function Mangue(espacoCelular, tabela_usos, tabela_solos, regrasMigracaoSolo, regrasMigracaoUsos)
     return Model {
         start = 1,
         finalTime = 100,         -- Duração da simulação em passos de tempo
@@ -49,37 +91,13 @@ function Mangue(espacoCelular, tabela_usos, tabela_solos)
                 -- MIGRAÇÃO DE SOLOS
                 -- Solo adjacente à vegetação terrestre ou solo descoberto migra para mangue
                 ---------------------------------------------------------
-                if celula.past.ClaseSolos == tabela_solos.MANGUE.valor
-                    or celula.past.ClaseSolos == tabela_solos.MANGUE_MIGRADO.valor
-                    or celula.past.ClaseSolos == tabela_solos.CANAL_FLUVIAL.valor then
-
-                    forEachNeighbor(celula, function(vizinho)
-                        if (vizinho.Usos == tabela_usos.VEGETACAO_TERRESTRE.valor
-                            or vizinho.Usos == tabela_usos.SOLO_DESCOBERTO.valor)
-                            and vizinho.ClaseSolos ~= tabela_solos.MANGUE.valor
-                            and vizinho.Alt2 <= zonaInfluencia then
-                            vizinho.ClaseSolos = tabela_solos.MANGUE_MIGRADO.valor
-                        end
-                    end)
-                end
+                migrarSolos(celula, tabela_usos, tabela_solos, regrasMigracaoSolo, zonaInfluencia)
 
                 ---------------------------------------------------------
                 -- MIGRAÇÃO DE USOS
                 -- Uso da célula adjacente muda para mangue se estiver dentro da zona de influência
                 ---------------------------------------------------------
-                if celula.past.Usos == tabela_usos.MANGUE.valor
-                    or celula.past.Usos == tabela_usos.MANGUE_MIGRADO.valor then
-
-                    forEachNeighbor(celula, function(vizinho)
-                        if (vizinho.Usos == tabela_usos.VEGETACAO_TERRESTRE.valor
-                            or vizinho.Usos == tabela_usos.SOLO_DESCOBERTO.valor)
-                            and vizinho.Alt2 <= zonaInfluencia
-                            and (vizinho.ClaseSolos == tabela_solos.MANGUE_MIGRADO.valor
-                                or vizinho.ClaseSolos == tabela_solos.MANGUE.valor) then
-                            vizinho.Usos = tabela_usos.MANGUE_MIGRADO.valor
-                        end
-                    end)
-                end
+                migrarUsos(celula, tabela_usos, tabela_solos, regrasMigracaoUsos, zonaInfluencia)
 
                 ---------------------------------------------------------
                 -- ACREÇÃO VERTICAL DA LAMA

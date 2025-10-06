@@ -64,6 +64,44 @@ tabela_solos = {
     MANGUE_MIGRADO = { valor = 9, cor = {34,139,34}, nome = "Mangue Migrado" }
 }
 
+
+---------------------------------------------------------
+-- CONFIGURAÇÃO DOS PARÂMETROS DE MIGRAÇÃO
+---------------------------------------------------------
+local regrasMigracao = {
+    origens = {
+        [tabela_solos.MANGUE.valor] = true,
+        [tabela_solos.MANGUE_MIGRADO.valor] = true,
+        [tabela_solos.CANAL_FLUVIAL.valor] = true
+    },
+    alvos = {
+        [tabela_usos.VEGETACAO_TERRESTRE.valor] = true,
+        [tabela_usos.SOLO_DESCOBERTO.valor] = true
+    },
+    soloDestino = tabela_solos.MANGUE_MIGRADO.valor,
+}
+
+
+---------------------------------------------------------
+-- PARÂMETROS DA REGRA DE MIGRAÇÃO DE USOS (MANGUE)
+---------------------------------------------------------
+local regrasMigracaoUsos = {
+    origens = {
+        [tabela_usos.MANGUE.valor] = true,
+        [tabela_usos.MANGUE_MIGRADO.valor] = true
+    },
+    alvos = {
+        [tabela_usos.VEGETACAO_TERRESTRE.valor] = true,
+        [tabela_usos.SOLO_DESCOBERTO.valor] = true
+    },
+    condSolos = {
+        [tabela_solos.MANGUE.valor] = true,
+        [tabela_solos.MANGUE_MIGRADO.valor] = true
+    },
+    usoDestino = tabela_usos.MANGUE_MIGRADO.valor,
+}
+
+
 -- ===============================================================
 -- CARREGAMENTO DO PROJETO E ESPAÇO CELULAR
 -- ===============================================================
@@ -95,7 +133,7 @@ env = Environment {
 
     -- Modelos que compõem o ambiente
     hidro = Hidro(espacoCelular, usos_inundados, regras_inundacao) { taxaElevacaoMar = 0.5 },
-    mangue = Mangue(espacoCelular, tabela_usos, tabela_solos) { taxaElevacaoMar = 0.5 },
+    mangue = Mangue(espacoCelular, tabela_usos, tabela_solos, regrasMigracao, regrasMigracaoUsos) { taxaElevacaoMar = 0.5 },
 
     -- Cálculo inicial de altitude média das células
     CalcularAltitudeMedia(espacoCelular){}
