@@ -12,7 +12,7 @@ end
 -- Aplica a regra de inundação a uma célula, se houver regra definida
 -- @param celula: célula do espaço celular
 -- @param regras: tabela de regras de inundação (uso -> uso inundado)
--- @param nomeAtributoUso: string com o nome do atributo de uso da célula
+-- @param nomeAtributoUso: nome do atributo de uso da célula (ex: "Usos")
 function aplicarInundacao(celula, regras, nomeAtributoUso)
     local usoAtual = celula.past[nomeAtributoUso]
     if regras[usoAtual] then
@@ -20,81 +20,93 @@ function aplicarInundacao(celula, regras, nomeAtributoUso)
     end
 end
 
+
 -- ===============================================================
--- MODELO HIDROLOGIA (Hidro)
+-- MODELO DE HIDROLOGIA (Hidro)
 -- ===============================================================
+-- Este modelo simula os impactos da elevação do nível do mar sobre a altimetria e uso da terra.
+-- Os parâmetros nomeAtributoUso e nomeAtributoAltimetria permitem generalizar o modelo
+-- para diferentes estruturas de dados no espaço celular.
+--
 -- @param cs: espaço celular
--- @param usos_inundados: tabela de usos que podem ser inundados
--- @param regras_inundacao: regras de transformação de uso em inundado
--- @param nomeAtributoUso: string com o nome do atributo de uso da célula
-function Hidro(cs, usos_inundados, regras_inundacao, nomeAtributoUso) 
+-- @param usos_inundados: tabela de usos considerados inundados
+-- @param regras_inundacao: regras de transformação de uso (uso -> uso_inundado)
+-- @param nomeAtributoUso: nome do atributo de uso da célula (ex: "Usos")
+-- @param nomeAtributoAltimetria: nome do atributo de altimetria (ex: "Alt2")
+function Hidro(cs, usos_inundados, regras_inundacao, nomeAtributoUso, nomeAtributoAltimetria)
 
     return Model {
         start = 1,
-        finalTime = 100,  -- Duração da simulação em passos de tempo
-
-        taxaElevacaoMar = 0.011, -- Taxa de elevação do nível do mar (IPCC, 2013)
-
-        
+        finalTime = 100,  -- duração da simulação (em passos de tempo)
+        taxaElevacaoMar = 0.011,  -- taxa média anual (m/ano) — IPCC, 2013
 
         -- ===========================================================
-        -- FUNÇÃO DE EXECUÇÃO (executada a cada passo do tempo)
+        -- FUNÇÃO DE EXECUÇÃO (executada a cada passo da simulação)
         -- ===========================================================
         execute = function(model, event)
             local tempo = event:getTime()
 
-            -- ===============================================================
-            -- Checa se o parâmetro nomeAtributoUso foi informado
-            -- ===============================================================
-            if nomeAtributoUso == nil or nomeAtributoUso == "" then
-                error("Parâmetro 'nomeAtributoUso' não informado. Informe o nome do atributo de uso da célula.")
+            -----------------------------------------------------------
+            -- Validação dos parâmetros de atributos
+            -----------------------------------------------------------
+            if not nomeAtributoUso or nomeAtributoUso == "" then
+                error("Parâmetro 'nomeAtributoUso' não informado. Informe o nome do atributo de uso.")
+            end
+            if not nomeAtributoAltimetria or nomeAtributoAltimetria == "" then
+                error("Parâmetro 'nomeAtributoAltimetria' não informado. Informe o nome do atributo de altimetria.")
             end
 
-            local primeiraCelula = cs.cells[1]  -- supondo que cs seja uma grade 2D
-            
+            local primeiraCelula = cs.cells[1]
             if primeiraCelula.past[nomeAtributoUso] == nil then
-                error("Atributo '" .. nomeAtributoUso .. "' não existe no espaço celular. Verifique o nome do atributo.")
+                error("Atributo '" .. nomeAtributoUso .. "' não existe no espaço celular.")
+            end
+            if primeiraCelula.past[nomeAtributoAltimetria] == nil then
+                error("Atributo '" .. nomeAtributoAltimetria .. "' não existe no espaço celular.")
             end
 
+            -----------------------------------------------------------
+            -- Dinâmica hidrológica: elevação e propagação da inundação
+            -----------------------------------------------------------
             forEachCell(cs, function(celula)
-                -- Verifica se a célula é mar ou já está inundada e se Alt2 >= 0
-                if ehMarOuInundado(celula.past[nomeAtributoUso], usos_inundados) and celula.past.Alt2 >= 0 then
-                    local vizinhosBaixos = 1 -- inclui a própria célula
+                local usoAtual = celula.past[nomeAtributoUso]
+                local altAtual = celula.past[nomeAtributoAltimetria]
 
-                    -- Conta quantos vizinhos têm altitude menor ou igual
+                -- Se for mar ou uso inundado e altitude válida
+                if ehMarOuInundado(usoAtual, usos_inundados) and altAtual >= 0 then
+                    local vizinhosBaixos = 1 -- inclui a célula atual
+
+                    -- Conta vizinhos com altitude menor ou igual
                     forEachNeighbor(celula, function(vizinho)
-                        if vizinho.past.Alt2 <= celula.past.Alt2 then
+                        if vizinho.past[nomeAtributoAltimetria] <= altAtual then
                             vizinhosBaixos = vizinhosBaixos + 1
                         end
                     end)
 
-                    -- Calcula fluxo de água distribuído entre vizinhos baixos
+                    -- Calcula o fluxo médio de elevação distribuído entre vizinhos
                     local fluxo = model.taxaElevacaoMar / vizinhosBaixos
 
-                    -- Atualiza a altitude da célula atual
-                    celula.Alt2 = celula.Alt2 + fluxo
+                    -- Atualiza a célula atual
+                    celula[nomeAtributoAltimetria] = celula[nomeAtributoAltimetria] + fluxo
 
                     -- Propaga o fluxo para os vizinhos baixos
                     forEachNeighbor(celula, function(vizinho)
-                        if vizinho.past.Alt2 <= celula.past.Alt2 then
-                            vizinho.Alt2 = vizinho.Alt2 + fluxo
+                        if vizinho.past[nomeAtributoAltimetria] <= altAtual then
+                            vizinho[nomeAtributoAltimetria] = vizinho[nomeAtributoAltimetria] + fluxo
 
-                            -- Aplica inundação caso o vizinho não seja mar/inundado
+                            -- Se o vizinho ainda não está inundado, aplica a regra
                             if not ehMarOuInundado(vizinho.past[nomeAtributoUso], usos_inundados) then
                                 aplicarInundacao(vizinho, regras_inundacao, nomeAtributoUso)
                             end
                         end
                     end)
-
                 end
             end)
         end,
 
         -- ===========================================================
-        -- FUNÇÃO DE INICIALIZAÇÃO DO MODELO
+        -- INICIALIZAÇÃO DO MODELO
         -- ===========================================================
         init = function(model)
-            -- Cria o temporizador para acionar a função execute a cada passo
             model.timer = Timer { Event { action = model } }
         end
     }
