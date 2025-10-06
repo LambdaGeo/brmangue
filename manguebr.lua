@@ -141,9 +141,9 @@ espacoCelular:synchronize()
 -- ===============================================================
 env = Environment {
     -- Modelos que compõem o ambiente
-    hidro = Hidro(espacoCelular, usos_inundados, regras_inundacao) { taxaElevacaoMar = 0.5 },
-    mangue = Mangue(espacoCelular, tabela_usos, tabela_solos, usos_inundados, 
-                    regrasMigracao, regrasMigracaoUsos, regrasAcrecao) { taxaElevacaoMar = 0.5 },
+    hidro = Hidro(espacoCelular, usos_inundados, regras_inundacao, "Usos") { taxaElevacaoMar = 0.5 },
+    --mangue = Mangue(espacoCelular, tabela_usos, tabela_solos, usos_inundados, 
+    --                regrasMigracao, regrasMigracaoUsos, regrasAcrecao) { taxaElevacaoMar = 0.5 },
 
     -- Cálculo inicial de altitude média das células
     CalcularAltitudeMedia(espacoCelular){}

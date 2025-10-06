@@ -12,10 +12,11 @@ end
 -- Aplica a regra de inundação a uma célula, se houver regra definida
 -- @param celula: célula do espaço celular
 -- @param regras: tabela de regras de inundação (uso -> uso inundado)
-function aplicarInundacao(celula, regras)
-    local usoAtual = celula.past.Usos
+-- @param nomeAtributoUso: string com o nome do atributo de uso da célula
+function aplicarInundacao(celula, regras, nomeAtributoUso)
+    local usoAtual = celula.past[nomeAtributoUso]
     if regras[usoAtual] then
-        celula.Usos = regras[usoAtual]
+        celula[nomeAtributoUso] = regras[usoAtual]
     end
 end
 
@@ -25,7 +26,8 @@ end
 -- @param cs: espaço celular
 -- @param usos_inundados: tabela de usos que podem ser inundados
 -- @param regras_inundacao: regras de transformação de uso em inundado
-function Hidro(cs, usos_inundados, regras_inundacao) 
+-- @param nomeAtributoUso: string com o nome do atributo de uso da célula
+function Hidro(cs, usos_inundados, regras_inundacao, nomeAtributoUso) 
 
     return Model {
         start = 1,
@@ -33,15 +35,30 @@ function Hidro(cs, usos_inundados, regras_inundacao)
 
         taxaElevacaoMar = 0.011, -- Taxa de elevação do nível do mar (IPCC, 2013)
 
+        
+
         -- ===========================================================
         -- FUNÇÃO DE EXECUÇÃO (executada a cada passo do tempo)
         -- ===========================================================
         execute = function(model, event)
             local tempo = event:getTime()
 
+            -- ===============================================================
+            -- Checa se o parâmetro nomeAtributoUso foi informado
+            -- ===============================================================
+            if nomeAtributoUso == nil or nomeAtributoUso == "" then
+                error("Parâmetro 'nomeAtributoUso' não informado. Informe o nome do atributo de uso da célula.")
+            end
+
+            local primeiraCelula = cs.cells[1]  -- supondo que cs seja uma grade 2D
+            
+            if primeiraCelula.past[nomeAtributoUso] == nil then
+                error("Atributo '" .. nomeAtributoUso .. "' não existe no espaço celular. Verifique o nome do atributo.")
+            end
+
             forEachCell(cs, function(celula)
                 -- Verifica se a célula é mar ou já está inundada e se Alt2 >= 0
-                if ehMarOuInundado(celula.past.Usos, usos_inundados) and celula.past.Alt2 >= 0 then
+                if ehMarOuInundado(celula.past[nomeAtributoUso], usos_inundados) and celula.past.Alt2 >= 0 then
                     local vizinhosBaixos = 1 -- inclui a própria célula
 
                     -- Conta quantos vizinhos têm altitude menor ou igual
@@ -63,8 +80,8 @@ function Hidro(cs, usos_inundados, regras_inundacao)
                             vizinho.Alt2 = vizinho.Alt2 + fluxo
 
                             -- Aplica inundação caso o vizinho não seja mar/inundado
-                            if not ehMarOuInundado(vizinho.past.Usos, usos_inundados) then
-                                aplicarInundacao(vizinho, regras_inundacao)
+                            if not ehMarOuInundado(vizinho.past[nomeAtributoUso], usos_inundados) then
+                                aplicarInundacao(vizinho, regras_inundacao, nomeAtributoUso)
                             end
                         end
                     end)
