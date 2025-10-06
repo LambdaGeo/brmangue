@@ -19,6 +19,19 @@ Elevacao = Model{
 	end,
 	init = function(model)
 
+        
+        -- ===============================================================
+        -- INICIALIZAÇÃO DAS CÉLULAS
+        -- ===============================================================
+        -- testes
+        forEachCell(espacoCelular, function(celula)
+            -- Inicializa a semente aleatória para cada célula
+            math.randomseed(os.time())
+            local n = math.random(0, 5)  -- Valor aleatório de teste (pode ser usado para Alt2)
+            --celula.Alt2 = n
+            --celula.Usos = USO_MAR
+        end)
+
 
 		model.timer = Timer{
 			Event{action = model},

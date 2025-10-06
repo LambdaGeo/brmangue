@@ -1,18 +1,8 @@
+-- models/mangue.lua
+
 -- ===============================================================
--- FUNÇÕES AUXILIARES
--- ===============================================================
-
--- Verifica se o uso da terra corresponde a mar ou a um uso inundado
--- @param uso: valor do uso atual da célula
--- @param usos_inundados: tabela onde a chave é o uso e o valor é true
-function ehMarOuInundado(uso, usos_inundados)
-    return usos_inundados[uso] == true
-end
-
-
----------------------------------------------------------
 -- FUNÇÃO GERAL DE MIGRAÇÃO DE SOLOS
----------------------------------------------------------
+-- ===============================================================
 function migrarSolos(celula, tabela_usos, tabela_solos, params, zonaInfluencia)
     -- Parâmetros esperados:
     -- params.origens: solos que podem gerar migração
@@ -31,9 +21,10 @@ function migrarSolos(celula, tabela_usos, tabela_solos, params, zonaInfluencia)
     end
 end
 
----------------------------------------------------------
+
+-- ===============================================================
 -- FUNÇÃO GERAL DE MIGRAÇÃO DE USOS
----------------------------------------------------------
+-- ===============================================================
 function migrarUsos(celula, tabela_usos, tabela_solos, params, zonaInfluencia)
     -- params.origens: usos que podem causar migração
     -- params.alvos: usos vizinhos que podem mudar
@@ -42,14 +33,29 @@ function migrarUsos(celula, tabela_usos, tabela_solos, params, zonaInfluencia)
     -- params.zonaInfluencia: limite de altitude
     if params.origens[celula.past.Usos] then
         forEachNeighbor(celula, function(vizinho)
-            if params.alvos[vizinho.Usos] and 
-                vizinho.Alt2 <= zonaInfluencia and 
-                params.condSolos[vizinho.ClaseSolos] then
+            if params.alvos[vizinho.Usos] 
+                and vizinho.Alt2 <= zonaInfluencia 
+                and params.condSolos[vizinho.ClaseSolos] then
                 vizinho.Usos = params.usoDestino
             end
         end)
     end
 end
+
+
+-- ===============================================================
+-- FUNÇÃO DE ACREÇÃO VERTICAL DA LAMA
+-- ===============================================================
+-- Aplica acreção apenas em solos permitidos e usos não proibidos
+function aplicarAcrecao(celula, tabela_solos, regrasAcrecao, taxaAcrecao_m)
+    local soloPermitido = regrasAcrecao.solosPermitidos[celula.ClaseSolos]
+    local usoPermitido = not regrasAcrecao.usosProibidos[celula.Usos]
+
+    if soloPermitido and usoPermitido then
+        celula.Alt2 = celula.Alt2 + taxaAcrecao_m
+    end
+end
+
 
 -- ===============================================================
 -- MODELO DE DINÂMICA DE MANGUE
@@ -57,7 +63,11 @@ end
 -- @param espacoCelular: espaço celular da simulação
 -- @param tabela_usos: tabela com classes de uso da terra
 -- @param tabela_solos: tabela com tipos de solo
-function Mangue(espacoCelular, tabela_usos, tabela_solos, regrasMigracaoSolo, regrasMigracaoUsos)
+-- @param usos_inundados: tabela de usos considerados inundados
+-- @param regrasMigracaoSolo: parâmetros para migração de solos
+-- @param regrasMigracaoUsos: parâmetros para migração de usos
+-- @param regrasAcrecao: parâmetros para acreção vertical da lama
+function Mangue(espacoCelular, tabela_usos, tabela_solos, usos_inundados, regrasMigracaoSolo, regrasMigracaoUsos, regrasAcrecao)
     return Model {
         start = 1,
         finalTime = 100,         -- Duração da simulação em passos de tempo
@@ -73,42 +83,23 @@ function Mangue(espacoCelular, tabela_usos, tabela_solos, regrasMigracaoSolo, re
         execute = function(modelo, event)
             local tempo = event:getTime()
 
-            ---------------------------------------------------------
-            -- CÁLCULO DO NÍVEL DO MAR E TAXA DE ACRESCIMENTO DE LAMA
-            ---------------------------------------------------------
+            -- Cálculo do nível do mar e taxa de acreção
             local nivelMar = tempo * modelo.taxaElevacaoMar
             local nivelMar_mm = nivelMar * 1000
             local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm) -- fórmula de acreção (mm)
             local taxaAcrecao_m = taxaAcrecao_mm / 1000            -- converte para metros
             local zonaInfluencia = modelo.alturaMare + nivelMar    -- zona de influência do mangue
 
-            ---------------------------------------------------------
-            -- ITERAÇÃO SOBRE CADA CÉLULA DO ESPAÇO CELULAR
-            ---------------------------------------------------------
+            -- Iteração sobre cada célula do espaço celular
             forEachCell(espacoCelular, function(celula)
-
-                ---------------------------------------------------------
-                -- MIGRAÇÃO DE SOLOS
-                -- Solo adjacente à vegetação terrestre ou solo descoberto migra para mangue
-                ---------------------------------------------------------
+                -- Migração de solos
                 migrarSolos(celula, tabela_usos, tabela_solos, regrasMigracaoSolo, zonaInfluencia)
 
-                ---------------------------------------------------------
-                -- MIGRAÇÃO DE USOS
-                -- Uso da célula adjacente muda para mangue se estiver dentro da zona de influência
-                ---------------------------------------------------------
+                -- Migração de usos
                 migrarUsos(celula, tabela_usos, tabela_solos, regrasMigracaoUsos, zonaInfluencia)
 
-                ---------------------------------------------------------
-                -- ACREÇÃO VERTICAL DA LAMA
-                -- Eleva a superfície do mangue de acordo com a taxa de acreção
-                ---------------------------------------------------------
-                if (celula.ClaseSolos == tabela_solos.MANGUE.valor
-                    or celula.ClaseSolos == tabela_solos.MANGUE_MIGRADO.valor)
-                    and celula.Usos ~= tabela_usos.MAR.valor
-                    and celula.Usos ~= tabela_usos.MANGUE_INUNDADO.valor then
-                    -- celula.Alt2 = celula.Alt2 + taxaAcrecao_m
-                end
+                -- Acreção vertical da lama
+                --aplicarAcrecao(celula, tabela_solos, regrasAcrecao, taxaAcrecao_m)
             end)
 
             --print("ITERAÇÃO:", tempo, nivelMar, zonaInfluencia)

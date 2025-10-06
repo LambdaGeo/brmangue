@@ -8,12 +8,11 @@
 -- ===============================================================
 -- IMPORTAÇÃO DE BIBLIOTECAS
 -- ===============================================================
-import("gis")  -- Biblioteca principal para GIS
-
-require("models/mangue")       -- Modelo de dinâmica de mangue
-require("models/hidro")        -- Modelo de hidrologia
-require("models/utils")        -- Funções utilitárias
-require("visualization/maps")  -- Visualização e mapeamento
+import("gis")                 -- Biblioteca principal para GIS
+require("models/mangue")      -- Modelo de dinâmica de mangue
+require("models/hidro")       -- Modelo de hidrologia
+require("models/utils")       -- Funções utilitárias
+require("visualization/maps") -- Visualização e mapeamento
 
 -- ===============================================================
 -- DEFINIÇÃO DAS CLASSES DE USO DA TERRA
@@ -64,10 +63,9 @@ tabela_solos = {
     MANGUE_MIGRADO = { valor = 9, cor = {34,139,34}, nome = "Mangue Migrado" }
 }
 
-
----------------------------------------------------------
--- CONFIGURAÇÃO DOS PARÂMETROS DE MIGRAÇÃO
----------------------------------------------------------
+-- ===============================================================
+-- CONFIGURAÇÃO DOS PARÂMETROS DE MIGRAÇÃO DE SOLOS
+-- ===============================================================
 local regrasMigracao = {
     origens = {
         [tabela_solos.MANGUE.valor] = true,
@@ -78,13 +76,12 @@ local regrasMigracao = {
         [tabela_usos.VEGETACAO_TERRESTRE.valor] = true,
         [tabela_usos.SOLO_DESCOBERTO.valor] = true
     },
-    soloDestino = tabela_solos.MANGUE_MIGRADO.valor,
+    soloDestino = tabela_solos.MANGUE_MIGRADO.valor
 }
 
-
----------------------------------------------------------
+-- ===============================================================
 -- PARÂMETROS DA REGRA DE MIGRAÇÃO DE USOS (MANGUE)
----------------------------------------------------------
+-- ===============================================================
 local regrasMigracaoUsos = {
     origens = {
         [tabela_usos.MANGUE.valor] = true,
@@ -98,16 +95,31 @@ local regrasMigracaoUsos = {
         [tabela_solos.MANGUE.valor] = true,
         [tabela_solos.MANGUE_MIGRADO.valor] = true
     },
-    usoDestino = tabela_usos.MANGUE_MIGRADO.valor,
+    usoDestino = tabela_usos.MANGUE_MIGRADO.valor
 }
 
+-- ===============================================================
+-- PARÂMETROS DA REGRA DE ACREÇÃO VERTICAL
+-- ===============================================================
+local regrasAcrecao = {
+    solosPermitidos = {
+        [tabela_solos.MANGUE.valor] = true,
+        [tabela_solos.MANGUE_MIGRADO.valor] = true
+    },
+    usosProibidos = {
+        [tabela_usos.MAR.valor] = true,
+        [tabela_usos.SOLO_INUNDADO.valor] = true,
+        [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor] = true,
+        [tabela_usos.MANGUE_INUNDADO.valor] = true,
+        [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
+    }
+}
 
 -- ===============================================================
 -- CARREGAMENTO DO PROJETO E ESPAÇO CELULAR
 -- ===============================================================
 local projeto = Project {
-    file = "recorte.qgs",  -- Arquivo do projeto QGIS
-    --cell_usos = "data/anil/elevacao_pol.shp",  -- Opção alternativa
+    file = "recorte.qgs",
     cell_usos = "data/teste_dinamica/Recorte_Teste.shp",
     clean = true
 }
@@ -116,24 +128,22 @@ local projeto = Project {
 local espacoCelular = CellularSpace {
     project = projeto,
     layer = "cell_usos",
-    xy = { "Col", "Lin" },                  -- Colunas e linhas do shapefile
-    select = { "ClaseSolos", "Alt2", "Usos" } -- Campos a serem importados
+    xy = { "Col", "Lin" },
+    select = { "ClaseSolos", "Alt2", "Usos" }
 }
 
--- Criação da vizinhança de Moore
+-- Criação da vizinhança de Moore e sincronização inicial
 espacoCelular:createNeighborhood { strategy = "moore", self = false }
-
--- Sincroniza atributos das células
 espacoCelular:synchronize()
 
 -- ===============================================================
 -- AMBIENTE DE SIMULAÇÃO
 -- ===============================================================
 env = Environment {
-
     -- Modelos que compõem o ambiente
     hidro = Hidro(espacoCelular, usos_inundados, regras_inundacao) { taxaElevacaoMar = 0.5 },
-    mangue = Mangue(espacoCelular, tabela_usos, tabela_solos, regrasMigracao, regrasMigracaoUsos) { taxaElevacaoMar = 0.5 },
+    mangue = Mangue(espacoCelular, tabela_usos, tabela_solos, usos_inundados, 
+                    regrasMigracao, regrasMigracaoUsos, regrasAcrecao) { taxaElevacaoMar = 0.5 },
 
     -- Cálculo inicial de altitude média das células
     CalcularAltitudeMedia(espacoCelular){}
@@ -154,17 +164,6 @@ env:add(Event { action = mapaAltitude })
 -- Sincronização periódica do espaço celular
 env:add(Event { action = function() espacoCelular:synchronize() end })
 
--- ===============================================================
--- INICIALIZAÇÃO DAS CÉLULAS
--- ===============================================================
-forEachCell(espacoCelular, function(celula)
-    -- Inicializa a semente aleatória para cada célula
-    math.randomseed(os.time())
-
-    local n = math.random(0, 5)  -- Valor aleatório de teste (pode ser usado para Alt2)
-    --celula.Alt2 = n
-    --celula.Usos = USO_MAR
-end)
 
 -- ===============================================================
 -- EXECUÇÃO DA SIMULAÇÃO
