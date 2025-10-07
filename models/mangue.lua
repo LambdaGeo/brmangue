@@ -74,9 +74,8 @@ function Mangue(espacoCelular, tabela_usos, tabela_solos, usos_inundados,
 
             -- Cálculo do nível do mar e taxa de acreção
             local nivelMar = tempo * modelo.taxaElevacaoMar
-            local nivelMar_mm = nivelMar * 1000
-            local taxaAcrecao_mm = 1.693 + (0.939 * nivelMar_mm)
-            local taxaAcrecao_m = taxaAcrecao_mm / 1000
+            local taxaAcrecao_m = 0.001693 + (0.939 * nivelMar) -- 1.693 + 0.939 * nivelMar_mm / 1000
+
             local zonaInfluencia = modelo.alturaMare + nivelMar
 
             forEachCell(espacoCelular, function(celula)
