@@ -46,6 +46,15 @@ tabela_usos = {
 }
 
 
+-- ===============================================================
+-- CLASSES DE SOLO
+-- ===============================================================
+tabela_solos = {
+    CANAL_FLUVIAL   = { valor = 0, cor = {0, 0, 255},   nome = "Canal Fluvial" },
+    MANGUE          = { valor = 3, cor = {0, 100, 0},   nome = "Mangue" },
+    MANGUE_MIGRADO  = { valor = 9, cor = {34, 139, 34}, nome = "Mangue Migrado" }
+}
+
 
 -- ===============================================================
 -- USOS INUNDADOS
@@ -75,14 +84,6 @@ local regras_inundacao = {
 
 
 
--- ===============================================================
--- CLASSES DE SOLO
--- ===============================================================
-tabela_solos = {
-    CANAL_FLUVIAL   = { valor = 0, cor = {0, 0, 255},   nome = "Canal Fluvial" },
-    MANGUE          = { valor = 3, cor = {0, 100, 0},   nome = "Mangue" },
-    MANGUE_MIGRADO  = { valor = 9, cor = {34, 139, 34}, nome = "Mangue Migrado" }
-}
 
 
 
@@ -90,7 +91,7 @@ tabela_solos = {
 -- REGRAS DE MIGRAÇÃO DE SOLOS
 -- ===============================================================
 -- Define condições de origem, destino e transformação para solos
-local regrasMigracao = {
+local regrasMigracaoSolo = {
     origens = {
         [tabela_solos.MANGUE.valor]         = true,
         [tabela_solos.MANGUE_MIGRADO.valor] = true,
@@ -173,7 +174,7 @@ espacoCelular:synchronize()
 -- ===============================================================
 -- AMBIENTE DE SIMULAÇÃO
 -- ===============================================================
-env = Environment {
+local env = Environment {
     -- Modelos dinâmicos principais
     hidro = Hidro(
         espacoCelular,
@@ -189,7 +190,7 @@ env = Environment {
         tabela_usos,
         tabela_solos,
         usos_inundados,
-        regrasMigracao,
+        regrasMigracaoSolo,
         regrasMigracaoUsos,
         regrasAcrecao,
         nomes_atributos

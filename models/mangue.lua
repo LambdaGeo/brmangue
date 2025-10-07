@@ -69,12 +69,16 @@ function Mangue(espacoCelular, tabela_usos, tabela_solos, usos_inundados,
         alturaMare = 6,
         taxaElevacaoMar = 0.5,
 
+        coeficienteA    = 1.693,  -- intercepto da equação de Alongi 
+        coeficienteB    = 0.939,   -- coeficiente de inclinação da equação de Alongi 
+   
+
         execute = function(modelo, event)
             local tempo = event:getTime()
 
             -- Cálculo do nível do mar e taxa de acreção
             local nivelMar = tempo * modelo.taxaElevacaoMar
-            local taxaAcrecao_m = 0.001693 + (0.939 * nivelMar) -- 1.693 + 0.939 * nivelMar_mm / 1000
+            local taxaAcrecao_m = modelo.coeficienteA/1000 + (modelo.coeficienteB * nivelMar) -- 1.693 + 0.939 * nivelMar_mm/ 1000
 
             local zonaInfluencia = modelo.alturaMare + nivelMar
 
