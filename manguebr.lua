@@ -185,6 +185,7 @@ local env = Environment {
         taxaElevacaoMar = 0.5
     },
 
+   
     mangue = Mangue(
         espacoCelular,
         tabela_usos,
@@ -197,6 +198,7 @@ local env = Environment {
     ) {
         taxaElevacaoMar = 0.5
     },
+ 
 
     -- Cálculo inicial da altitude média
     CalcularAltitudeMedia(espacoCelular, nomes_atributos) {}
