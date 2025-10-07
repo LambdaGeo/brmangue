@@ -3,6 +3,8 @@ Elevacao = Model{
 	alturaMare      =  6, -- altura da maré (Ferreira, 1988)
 	finalTime       = 88,
     nivelMar = 0,
+    taxaAcrecao_m = 0,
+
 	execute = function(model, event)
         local tempo = event:getTime()
 
@@ -10,7 +12,7 @@ Elevacao = Model{
         model.taxaAcrecao_m = 0.001693 + (0.939 * model.nivelMar) -- 1.693 + 0.939 * nivelMar_mm / 1000
 
         model.zonaInfluencia = model.alturaMare + model.nivelMar 
-        print (tempo+2012, string.format("%.2f", model.nivelMar ),  string.format("%.2f", model.taxaAcrecao_m), model.zonaInfluencia)
+        print (tempo+2012, string.format("%.2f", model.nivelMar ),  string.format("%.2f", model.taxaAcrecao_m), string.format("%.2f", model.zonaInfluencia))
 	end,
 	init = function(model)
 

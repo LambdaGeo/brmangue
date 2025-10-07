@@ -3,15 +3,19 @@
 require "models/elevation"
 
 
+local elevacao = Elevacao{}
 env = Environment{
-	Elevacao{},
+	elevacao,
 
 }
 
 
 chart = Chart{
-	target = env,
-	select = "nivelMar"
+	target = elevacao,
+	select = {"nivelMar", "taxaAcrecao_m"},
+	title = "Elevação do nível do mar e taxa de acreção",
+	xLabel = "Ano",
+	yLabel = "m",
 }
 
 env:add(Event{action = chart})
