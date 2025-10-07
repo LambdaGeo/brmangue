@@ -30,7 +30,7 @@ function migrarUsos(celula, nomes_atributos, params, zonaInfluencia)
         forEachNeighbor(celula, function(vizinho)
             if params.alvos[vizinho[attrUso]]
                 and vizinho[attrAlt] <= zonaInfluencia
-                and params.condSolos[vizinho[attrSolo]] then
+                and params.condSolos[vizinho.past[attrSolo]] then
                 vizinho[attrUso] = params.usoDestino
             end
         end)
@@ -58,7 +58,7 @@ end
 -- ===============================================================
 -- MODELO DE DINÂMICA DE MANGUE
 -- ===============================================================
-function Mangue(espacoCelular, tabela_usos, tabela_solos, usos_inundados,
+function Mangue(espacoCelular,
                 regrasMigracaoSolo, regrasMigracaoUsos, regrasAcrecao, nomes_atributos)
 
     return Model {
@@ -85,7 +85,7 @@ function Mangue(espacoCelular, tabela_usos, tabela_solos, usos_inundados,
             forEachCell(espacoCelular, function(celula)
                 migrarSolos(celula, nomes_atributos, regrasMigracaoSolo, zonaInfluencia)
                 migrarUsos(celula, nomes_atributos, regrasMigracaoUsos, zonaInfluencia)
-                aplicarAcrecao(celula, nomes_atributos, regrasAcrecao, taxaAcrecao_m)
+                --aplicarAcrecao(celula, nomes_atributos, regrasAcrecao, taxaAcrecao_m)
             end)
         end,
 

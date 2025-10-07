@@ -133,7 +133,7 @@ for time = Initial_time, Final_time, 1 do
 		if(cell.ClasseUsos2 == MANGROVE) then							
 			forEachNeighbor(cell, function(cell, neigh)
 				 if (neigh.ClasseUsos2 ~= MANGROVE) then
-				 	if (Z_m >= neigh.Alt2) and
+				 	if (Z_m >= neigh.pasAlt2) and
 				 	   (neigh.ClasseUsos2 == TERRESTRIAL_VEGETATION) and
 				 	   (neigh.ClasseSolos == MANGROVE_SOIL or MANGROVE_SOIL2) then
 					         neigh.ClasseUsos2 = MANGROVE_MIGRATION

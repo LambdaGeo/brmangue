@@ -35,6 +35,14 @@ function CalcularAltitudeMedia(espacoCelular, nomes_atributos)
         end,
 
         init = function(model)
+
+
+            forEachCell(espacoCelular, function(celula)
+                --celula["Uso"] = 3
+                --celula["Altitude"] = 0
+
+            end)
+
             model.timer = Timer { Event { action = model } }
         end
     }

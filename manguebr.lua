@@ -176,6 +176,9 @@ espacoCelular:synchronize()
 -- ===============================================================
 local env = Environment {
     -- Modelos dinâmicos principais
+
+
+    
     hidro = Hidro(
         espacoCelular,
         usos_inundados,
@@ -188,16 +191,14 @@ local env = Environment {
    
     mangue = Mangue(
         espacoCelular,
-        tabela_usos,
-        tabela_solos,
-        usos_inundados,
+
         regrasMigracaoSolo,
         regrasMigracaoUsos,
         regrasAcrecao,
         nomes_atributos
     ) {
-        taxaElevacaoMar = 0.5
-    },
+        taxaElevacaoMar = 0.5,
+        alturaMare =  0 },
  
 
     -- Cálculo inicial da altitude média
@@ -226,5 +227,5 @@ env:add(Event { action = function() espacoCelular:synchronize() end })
 -- ===============================================================
 -- EXECUÇÃO DA SIMULAÇÃO
 -- ===============================================================
--- env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
+env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
 env:run()
