@@ -7,6 +7,7 @@ Elevacao = Model{
 
 	execute = function(model, event)
         local tempo = event:getTime()
+        
 
         model.nivelMar = tempo * model.taxaElevacaoMar
         model.taxaAcrecao_m = 0.001693 + (0.939 * model.nivelMar) -- 1.693 + 0.939 * nivelMar_mm / 1000

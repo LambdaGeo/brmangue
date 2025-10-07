@@ -3,15 +3,18 @@
 require "models/elevation"
 
 
-local elevacao = Elevacao{}
-env = Environment{
-	elevacao,
+
+
+
+
+local env = Environment{
+		elevacao =  Elevacao{}
 
 }
 
 
 chart = Chart{
-	target = elevacao,
+	target = env.elevacao,
 	select = {"nivelMar", "taxaAcrecao_m"},
 	title = "Elevação do nível do mar e taxa de acreção",
 	xLabel = "Ano",
