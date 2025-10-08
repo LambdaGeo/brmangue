@@ -15,11 +15,6 @@ require("models/utils")       -- Funções utilitárias de apoio
 require("visualization/maps") -- Módulo de visualização e geração de mapas
 
 
--- ===============================================================
--- CONSTANTES DO MODELO
--- ===============================================================
--- Taxa de elevação do nível do mar (em metros/ano, por exemplo)
-local TAXA_ELEVACAO_MAR = 0.5
 
 
 -- ===============================================================
@@ -85,6 +80,17 @@ local espacoCelular = CellularSpace {
 espacoCelular:createNeighborhood { strategy = "moore", self = false }
 espacoCelular:synchronize()
 
+local hidro_model = Hidro(espacoCelular, tabela_usos, nomes_atributos)
+local mangue_model = Mangue(espacoCelular, tabela_solos, tabela_usos, nomes_atributos)
+
+
+-- ===============================================================
+-- CONSTANTES DO MODELO
+-- ===============================================================
+-- Taxa de elevação do nível do mar (em metros/ano, por exemplo)
+local TAXA_ELEVACAO_MAR = 0.1
+local ALTURA_MARE = 0
+
 
 -- ===============================================================
 -- AMBIENTE DE SIMULAÇÃO
@@ -93,8 +99,8 @@ espacoCelular:synchronize()
 local env = Environment {
     
     -- Modelos de dinâmica
-    hidro  = Hidro(espacoCelular, tabela_usos, nomes_atributos) { taxaElevacaoMar = TAXA_ELEVACAO_MAR },
-    mangue = Mangue(espacoCelular, tabela_solos, tabela_usos, nomes_atributos) { taxaElevacaoMar = TAXA_ELEVACAO_MAR, alturaMare = 0 },
+    hidro  =  hidro_model{ taxaElevacaoMar = TAXA_ELEVACAO_MAR },
+    mangue =  mangue_model{ taxaElevacaoMar = TAXA_ELEVACAO_MAR, alturaMare = ALTURA_MARE },
 
     -- Cálculo inicial da altitude média
     CalcularAltitudeMedia(espacoCelular, nomes_atributos) {}
@@ -119,6 +125,6 @@ env:add(Event { action = function() espacoCelular:synchronize() end })
 -- ===============================================================
 -- Inicia a simulação completa
 -- (para modo interativo, descomente a linha abaixo)
--- env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
+env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
 
 env:run()

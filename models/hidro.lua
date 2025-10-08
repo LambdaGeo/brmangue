@@ -1,85 +1,80 @@
-
-
-
-
-
 -- ===============================================================
 -- FUNÇÕES AUXILIARES
 -- ===============================================================
 
--- Verifica se o uso da terra corresponde a mar ou a um uso inundado
--- @param uso: valor do uso atual da célula
--- @param usos_inundados: tabela onde a chave é o uso e o valor é true
-function ehMarOuInundado(uso, usos_inundados)
+-- Verifica se o uso da terra corresponde a mar ou a um uso inundado.
+-- Essa função é usada para determinar se uma célula já está sob influência
+-- da maré ou da inundação.
+--
+-- @param uso : valor do uso atual da célula
+-- @return true se o uso for mar ou um tipo inundado, false caso contrário
+function ehMarOuInundado(uso)
+    -- Lista dos usos considerados inundados
+    local usos_inundados = {
+        [tabela_usos.MAR.valor]                          = true,
+        [tabela_usos.SOLO_INUNDADO.valor]                = true,
+        [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor]    = true,
+        [tabela_usos.MANGUE_INUNDADO.valor]              = true,
+        [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
+    }
+
     return usos_inundados[uso] == true
 end
 
--- Aplica a regra de inundação a uma célula, se houver regra definida
--- @param celula: célula do espaço celular
--- @param regras: tabela de regras de inundação (uso -> uso inundado)
--- @param attrUso: nome do atributo de uso da célula (ex: "Usos")
-function aplicarInundacao(celula, regras, attrUso)
+
+
+-- Aplica a regra de inundação a uma célula, se houver regra definida.
+-- Transforma o uso atual em sua versão "inundada" correspondente.
+--
+-- @param celula  : célula do espaço celular
+-- @param attrUso : nome do atributo de uso da célula (ex: "Usos")
+function aplicarInundacao(celula, attrUso)
     local usoAtual = celula.past[attrUso]
+
+    -- Tabela de regras de conversão: uso seco -> uso inundado
+    local regras = {
+        [tabela_usos.MANGUE.valor]               = tabela_usos.MANGUE_INUNDADO.valor,
+        [tabela_usos.MANGUE_MIGRADO.valor]       = tabela_usos.MANGUE_INUNDADO.valor,
+        [tabela_usos.VEGETACAO_TERRESTRE.valor]  = tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor,
+        [tabela_usos.AREA_ANTROPIZADA.valor]     = tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor,
+        [tabela_usos.SOLO_DESCOBERTO.valor]      = tabela_usos.SOLO_INUNDADO.valor
+    }
+
+    -- Se o uso atual tiver uma regra correspondente, aplica a transformação
     if regras[usoAtual] then
         celula[attrUso] = regras[usoAtual]
     end
 end
 
 
+
 -- ===============================================================
 -- MODELO DE HIDROLOGIA (Hidro)
 -- ===============================================================
--- Simula os impactos da elevação do nível do mar sobre a altimetria
--- e o uso da terra, de forma generalizável para diferentes modelos.
+-- Simula os impactos da elevação do nível do mar sobre a altimetria e o uso do solo.
+-- Distribui o acréscimo do nível do mar entre as células inundadas e seus vizinhos,
+-- propagando a inundação de forma gradual ao longo do tempo.
 --
--- @param cs: espaço celular
--- @param usos_inundados: tabela de usos considerados inundados
--- @param regras_inundacao: tabela de transformações (uso -> uso_inundado)
--- @param nomes_atributos: tabela com os nomes dos atributos da célula:
---        { uso = "Usos", alt = "Alt2" }
+-- @param cs              : espaço celular (CellularSpace)
+-- @param tabela_usos     : tabela com os códigos de uso do solo
+-- @param nomes_atributos : tabela com os nomes dos atributos da célula (ex: { uso = "Usos", alt = "Alt2" })
 function Hidro(cs, tabela_usos, nomes_atributos)
-
-
-    -- ===============================================================
--- USOS INUNDADOS
--- ===============================================================
--- Tabela auxiliar que identifica rapidamente quais usos estão sob inundação
-local usos_inundados = {
-    [tabela_usos.MAR.valor]                          = true,
-    [tabela_usos.SOLO_INUNDADO.valor]                = true,
-    [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor]    = true,
-    [tabela_usos.MANGUE_INUNDADO.valor]              = true,
-    [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
-}
-
-
-
--- ===============================================================
--- REGRAS DE INUNDAÇÃO
--- ===============================================================
--- Define as transformações de uso da terra quando ocorre inundação
-local regras_inundacao = {
-    [tabela_usos.MANGUE.valor]               = tabela_usos.MANGUE_INUNDADO.valor,
-    [tabela_usos.MANGUE_MIGRADO.valor]       = tabela_usos.MANGUE_INUNDADO.valor,
-    [tabela_usos.VEGETACAO_TERRESTRE.valor]  = tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor,
-    [tabela_usos.AREA_ANTROPIZADA.valor]     = tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor,
-    [tabela_usos.SOLO_DESCOBERTO.valor]      = tabela_usos.SOLO_INUNDADO.valor
-}
-
-
     return Model {
         start = 1,
         finalTime = 100,
-        taxaElevacaoMar = 0.011,  -- taxa média anual (m/ano) — IPCC, 2013
+
+        -- Taxa média anual de elevação do nível do mar (m/ano)
+        -- Fonte: IPCC (2013)
+        taxaElevacaoMar = 0.011,
 
         -- ===========================================================
-        -- EXECUÇÃO (a cada passo da simulação)
+        -- EXECUÇÃO (a cada passo temporal da simulação)
         -- ===========================================================
         execute = function(model, event)
             local tempo = event:getTime()
 
             -----------------------------------------------------------
-            -- Validação dos parâmetros
+            -- Validação dos parâmetros essenciais
             -----------------------------------------------------------
             local attrUso = nomes_atributos.uso
             local attrAlt = nomes_atributos.alt
@@ -91,6 +86,7 @@ local regras_inundacao = {
                 error("Campo 'alt' ausente em nomes_atributos.")
             end
 
+            -- Valida se os atributos existem no espaço celular
             local primeiraCelula = cs.cells[1]
             if primeiraCelula.past[attrUso] == nil then
                 error("Atributo '" .. attrUso .. "' não existe no espaço celular.")
@@ -106,31 +102,31 @@ local regras_inundacao = {
                 local usoAtual = celula.past[attrUso]
                 local altAtual = celula.past[attrAlt]
 
-                -- Se for mar ou uso inundado e altitude válida
-                if ehMarOuInundado(usoAtual, usos_inundados) and altAtual >= 0 then
-                    local vizinhosBaixos = 1 -- inclui a célula atual
+                -- Verifica se a célula é mar/inundada e tem altitude válida
+                if ehMarOuInundado(usoAtual) and altAtual >= 0 then
+                    local vizinhosBaixos = 1 -- inclui a própria célula
 
-                    -- Conta vizinhos com altitude menor ou igual
+                    -- Conta quantos vizinhos têm altitude menor ou igual
                     forEachNeighbor(celula, function(vizinho)
                         if vizinho.past[attrAlt] <= altAtual then
                             vizinhosBaixos = vizinhosBaixos + 1
                         end
                     end)
 
-                    -- Calcula o fluxo médio de elevação distribuído entre vizinhos
+                    -- Calcula o fluxo de elevação distribuído entre os vizinhos baixos
                     local fluxo = model.taxaElevacaoMar / vizinhosBaixos
 
-                    -- Atualiza a célula atual
+                    -- Eleva a altitude da célula atual
                     celula[attrAlt] = celula[attrAlt] + fluxo
 
-                    -- Propaga o fluxo para os vizinhos baixos
+                    -- Propaga a elevação para vizinhos com menor altitude
                     forEachNeighbor(celula, function(vizinho)
                         if vizinho.past[attrAlt] <= altAtual then
                             vizinho[attrAlt] = vizinho[attrAlt] + fluxo
 
-                            -- Se o vizinho ainda não está inundado, aplica a regra
-                            if not ehMarOuInundado(vizinho.past[attrUso], usos_inundados) then
-                                aplicarInundacao(vizinho, regras_inundacao, attrUso)
+                            -- Se o vizinho ainda não estiver inundado, aplica a transformação
+                            if not ehMarOuInundado(vizinho.past[attrUso]) then
+                                aplicarInundacao(vizinho, attrUso)
                             end
                         end
                     end)
