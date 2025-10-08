@@ -88,7 +88,7 @@ local mangue_model = Mangue(espacoCelular, tabela_solos, tabela_usos, nomes_atri
 -- CONSTANTES DO MODELO
 -- ===============================================================
 -- Taxa de elevação do nível do mar (em metros/ano, por exemplo)
-local TAXA_ELEVACAO_MAR = 0.1
+local TAXA_ELEVACAO_MAR = 0.5
 local ALTURA_MARE = 0
 
 
@@ -103,7 +103,8 @@ local env = Environment {
     mangue =  mangue_model{ taxaElevacaoMar = TAXA_ELEVACAO_MAR, alturaMare = ALTURA_MARE },
 
     -- Cálculo inicial da altitude média
-    CalcularAltitudeMedia(espacoCelular, nomes_atributos) {}
+    -- usado para verificar se o aumento do nivel do mar esta funcionando
+    --CalcularAltitudeMedia(espacoCelular, nomes_atributos) {}
 }
 
 
@@ -125,6 +126,6 @@ env:add(Event { action = function() espacoCelular:synchronize() end })
 -- ===============================================================
 -- Inicia a simulação completa
 -- (para modo interativo, descomente a linha abaixo)
-env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
+--env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
 
 env:run()
