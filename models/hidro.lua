@@ -1,74 +1,144 @@
+-- ===============================================================
+-- FUNÇÕES AUXILIARES
+-- ===============================================================
 
-function ehMarOuInundado(uso, usos_inundados)
-    -- usos_inundados é uma tabela onde a chave é o uso e o valor true
+-- Verifica se o uso da terra corresponde a mar ou a um uso inundado.
+-- Essa função é usada para determinar se uma célula já está sob influência
+-- da maré ou da inundação.
+--
+-- @param uso : valor do uso atual da célula
+-- @return true se o uso for mar ou um tipo inundado, false caso contrário
+function ehMarOuInundado(uso)
+    -- Lista dos usos considerados inundados
+    local usos_inundados = {
+        [tabela_usos.MAR.valor]                          = true,
+        [tabela_usos.SOLO_INUNDADO.valor]                = true,
+        [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor]    = true,
+        [tabela_usos.MANGUE_INUNDADO.valor]              = true,
+        [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
+    }
+
     return usos_inundados[uso] == true
 end
 
 
-function aplicarInundacao(celula, regras)
-    local usoAtual = celula.past.Usos
+
+-- Aplica a regra de inundação a uma célula, se houver regra definida.
+-- Transforma o uso atual em sua versão "inundada" correspondente.
+--
+-- @param celula  : célula do espaço celular
+-- @param attrUso : nome do atributo de uso da célula (ex: "Usos")
+function aplicarInundacao(celula, attrUso)
+    local usoAtual = celula.past[attrUso]
+
+    -- Tabela de regras de conversão: uso seco -> uso inundado
+    local regras = {
+        [tabela_usos.MANGUE.valor]               = tabela_usos.MANGUE_INUNDADO.valor,
+        [tabela_usos.MANGUE_MIGRADO.valor]       = tabela_usos.MANGUE_INUNDADO.valor,
+        [tabela_usos.VEGETACAO_TERRESTRE.valor]  = tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor,
+        [tabela_usos.AREA_ANTROPIZADA.valor]     = tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor,
+        [tabela_usos.SOLO_DESCOBERTO.valor]      = tabela_usos.SOLO_INUNDADO.valor
+    }
+
+    -- Se o uso atual tiver uma regra correspondente, aplica a transformação
     if regras[usoAtual] then
-        celula.Usos = regras[usoAtual]
+        celula[attrUso] = regras[usoAtual]
     end
 end
 
 
+
 -- ===============================================================
--- MODELO PRINCIPAL
+-- MODELO DE HIDROLOGIA (Hidro)
 -- ===============================================================
-function Hidro (cs, USOS, usos_inundados, REGRAS_INUNDACAO) 
-    
+-- Simula os impactos da elevação do nível do mar sobre a altimetria e o uso do solo.
+-- Distribui o acréscimo do nível do mar entre as células inundadas e seus vizinhos,
+-- propagando a inundação de forma gradual ao longo do tempo.
+--
+-- @param cs              : espaço celular (CellularSpace)
+-- @param tabela_usos     : tabela com os códigos de uso do solo
+-- @param nomes_atributos : tabela com os nomes dos atributos da célula (ex: { uso = "Usos", alt = "Alt2" })
+function Hidro(cs, tabela_usos, nomes_atributos)
     return Model {
-    start = 1,
-    finalTime = 20,
+        start = 1,
+        finalTime = 100,
 
-    taxaElevacaoMar = 0.011, -- Taxa de elevação do nível do mar (IPCC, 2013)
- 
-    
+        -- Taxa média anual de elevação do nível do mar (m/ano)
+        -- Fonte: IPCC (2013)
+        taxaElevacaoMar = 0.011,
 
-    execute = function(model, event)
-        local tempo = event:getTime()
+        -- ===========================================================
+        -- EXECUÇÃO (a cada passo temporal da simulação)
+        -- ===========================================================
+        execute = function(model, event)
+            local tempo = event:getTime()
 
-        forEachCell(cs, function(celula)
-            if ehMarOuInundado(celula.past.Usos, usos_inundados) and celula.past.Alt2 >= 0 then
-                local vizinhosBaixos = 1 -- inclui ele mesmo
+            -----------------------------------------------------------
+            -- Validação dos parâmetros essenciais
+            -----------------------------------------------------------
+            local attrUso = nomes_atributos.uso
+            local attrAlt = nomes_atributos.alt
 
-                forEachNeighbor(celula, function(vizinho)
-                    if vizinho.past.Alt2 <= celula.past.Alt2  then -- <= para testar a distribuicao
-                        vizinhosBaixos = vizinhosBaixos + 1
-                    end
-                end)
-
-                
-                local fluxo = model.taxaElevacaoMar  / vizinhosBaixos
-
-                celula.Alt2 = celula.Alt2 + fluxo
-
-                --print (vizinhosBaixos)
-
-                forEachNeighbor(celula, function(vizinho)
-                    if vizinho.past.Alt2 <= celula.past.Alt2   then
-                        vizinho.Alt2 = vizinho.Alt2 + fluxo
-
-                        if not ehMarOuInundado(vizinho.past.Usos, usos_inundados)  then
-                            aplicarInundacao(vizinho, REGRAS_INUNDACAO)
-                        end
-                    end
-                end)
-
-                
+            if not attrUso or attrUso == "" then
+                error("Campo 'uso' ausente em nomes_atributos.")
+            end
+            if not attrAlt or attrAlt == "" then
+                error("Campo 'alt' ausente em nomes_atributos.")
             end
 
-        end)
-    end,
+            -- Valida se os atributos existem no espaço celular
+            local primeiraCelula = cs.cells[1]
+            if primeiraCelula.past[attrUso] == nil then
+                error("Atributo '" .. attrUso .. "' não existe no espaço celular.")
+            end
+            if primeiraCelula.past[attrAlt] == nil then
+                error("Atributo '" .. attrAlt .. "' não existe no espaço celular.")
+            end
 
-    init = function(model)
-        
+            -----------------------------------------------------------
+            -- Dinâmica hidrológica: elevação e propagação da inundação
+            -----------------------------------------------------------
+            forEachCell(cs, function(celula)
+                local usoAtual = celula.past[attrUso]
+                local altAtual = celula.past[attrAlt]
 
-        model.timer = Timer {
-            Event { action = model },
-        }
+                -- Verifica se a célula é mar/inundada e tem altitude válida
+                if ehMarOuInundado(usoAtual) and altAtual >= 0 then
+                    local vizinhosBaixos = 1 -- inclui a própria célula
 
-    end
-}
+                    -- Conta quantos vizinhos têm altitude menor ou igual
+                    forEachNeighbor(celula, function(vizinho)
+                        if vizinho.past[attrAlt] <= altAtual then
+                            vizinhosBaixos = vizinhosBaixos + 1
+                        end
+                    end)
+
+                    -- Calcula o fluxo de elevação distribuído entre os vizinhos baixos
+                    local fluxo = model.taxaElevacaoMar / vizinhosBaixos
+
+                    -- Eleva a altitude da célula atual
+                    celula[attrAlt] = celula[attrAlt] + fluxo
+
+                    -- Propaga a elevação para vizinhos com menor altitude
+                    forEachNeighbor(celula, function(vizinho)
+                        if vizinho.past[attrAlt] <= altAtual then
+                            vizinho[attrAlt] = vizinho[attrAlt] + fluxo
+
+                            -- Se o vizinho ainda não estiver inundado, aplica a transformação
+                            if not ehMarOuInundado(vizinho.past[attrUso]) then
+                                aplicarInundacao(vizinho, attrUso)
+                            end
+                        end
+                    end)
+                end
+            end)
+        end,
+
+        -- ===========================================================
+        -- INICIALIZAÇÃO DO MODELO
+        -- ===========================================================
+        init = function(model)
+            model.timer = Timer { Event { action = model } }
+        end
+    }
 end
