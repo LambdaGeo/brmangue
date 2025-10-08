@@ -8,9 +8,9 @@ function migrarSolos(celula, nomes_atributos, params, zonaInfluencia)
 
     if params.origens[celula.past[attrSolo]] then
         forEachNeighbor(celula, function(vizinho)
-            if params.alvos[vizinho[attrUso]]
-                and vizinho[attrSolo] ~= params.soloDestino
-                and vizinho[attrAlt] <= zonaInfluencia then
+            if params.alvos[vizinho.past[attrUso]]
+                and vizinho.past[attrSolo] ~= params.soloDestino
+                and vizinho.past[attrAlt] <= zonaInfluencia then
                 vizinho[attrSolo] = params.soloDestino
             end
         end)
@@ -28,8 +28,8 @@ function migrarUsos(celula, nomes_atributos, params, zonaInfluencia)
 
     if params.origens[celula.past[attrUso]] then
         forEachNeighbor(celula, function(vizinho)
-            if params.alvos[vizinho[attrUso]]
-                and vizinho[attrAlt] <= zonaInfluencia
+            if params.alvos[vizinho.past[attrUso]]
+                and vizinho.past[attrAlt] <= zonaInfluencia
                 and params.condSolos[vizinho.past[attrSolo]] then
                 vizinho[attrUso] = params.usoDestino
             end
