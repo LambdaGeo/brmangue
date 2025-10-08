@@ -59,7 +59,67 @@ end
 -- MODELO DE DINÂMICA DE MANGUE
 -- ===============================================================
 function Mangue(espacoCelular,
-                regrasMigracaoSolo, regrasMigracaoUsos, regrasAcrecao, nomes_atributos)
+                tabela_solos, tabela_usos, nomes_atributos)
+
+
+    -- ===============================================================
+-- REGRAS DE MIGRAÇÃO DE SOLOS
+-- ===============================================================
+-- Define condições de origem, destino e transformação para solos
+local regrasMigracaoSolo = {
+    origens = {
+        [tabela_solos.MANGUE.valor]         = true,
+        [tabela_solos.MANGUE_MIGRADO.valor] = true,
+        [tabela_solos.CANAL_FLUVIAL.valor]  = true
+    },
+    alvos = {
+        [tabela_usos.VEGETACAO_TERRESTRE.valor] = true,
+        [tabela_usos.SOLO_DESCOBERTO.valor]     = true
+    },
+    soloDestino = tabela_solos.MANGUE_MIGRADO.valor
+}
+
+
+
+-- ===============================================================
+-- REGRAS DE MIGRAÇÃO DE USOS
+-- ===============================================================
+-- Controla o processo de migração dos usos do solo relacionados ao mangue
+local regrasMigracaoUsos = {
+    origens = {
+        [tabela_usos.MANGUE.valor]         = true,
+        [tabela_usos.MANGUE_MIGRADO.valor] = true
+    },
+    alvos = {
+        [tabela_usos.VEGETACAO_TERRESTRE.valor] = true,
+        [tabela_usos.SOLO_DESCOBERTO.valor]     = true
+    },
+    condSolos = {
+        [tabela_solos.MANGUE.valor]         = true,
+        [tabela_solos.MANGUE_MIGRADO.valor] = true
+    },
+    usoDestino = tabela_usos.MANGUE_MIGRADO.valor
+}
+
+
+
+-- ===============================================================
+-- REGRAS DE ACREÇÃO VERTICAL
+-- ===============================================================
+-- Controla o acúmulo vertical de sedimentos nos solos do tipo mangue
+local regrasAcrecao = {
+    solosPermitidos = {
+        [tabela_solos.MANGUE.valor]         = true,
+        [tabela_solos.MANGUE_MIGRADO.valor] = true
+    },
+    usosProibidos = {
+        [tabela_usos.MAR.valor]                          = true,
+        [tabela_usos.SOLO_INUNDADO.valor]                = true,
+        [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor]    = true,
+        [tabela_usos.MANGUE_INUNDADO.valor]              = true,
+        [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
+    }
+}
 
     return Model {
         start = 1,

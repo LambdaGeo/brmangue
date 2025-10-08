@@ -1,7 +1,6 @@
 -- ===============================================================
 -- IMPACTOS DA ELEVAÇÃO DO NÍVEL DO MAR EM ECOSSISTEMAS DE MANGUE
--- ESTUDO DE CASO: REENTRÂNCIAS MARANHENSES
--- AUTOR: Denilson da Silva Bezerra
+-- AUTOR ORIGINAL: Denilson da Silva Bezerra
 -- REVISADO E REESTRUTURADO POR: Sergio Souza Costa
 -- ===============================================================
 
@@ -9,18 +8,24 @@
 -- ===============================================================
 -- IMPORTAÇÃO DE BIBLIOTECAS
 -- ===============================================================
-import("gis")                 -- Biblioteca principal para operações GIS
+import("gis")                 -- Biblioteca principal para operações espaciais (GIS)
 require("models/mangue")      -- Modelo de dinâmica de mangue
 require("models/hidro")       -- Modelo de hidrologia
-require("models/utils")       -- Funções utilitárias auxiliares
-require("visualization/maps") -- Módulo de visualização e mapeamento
+require("models/utils")       -- Funções utilitárias de apoio
+require("visualization/maps") -- Módulo de visualização e geração de mapas
 
+
+-- ===============================================================
+-- CONSTANTES DO MODELO
+-- ===============================================================
+-- Taxa de elevação do nível do mar (em metros/ano, por exemplo)
+local TAXA_ELEVACAO_MAR = 0.5
 
 
 -- ===============================================================
 -- DEFINIÇÃO DOS NOMES DOS ATRIBUTOS
 -- ===============================================================
--- Define os nomes dos campos presentes no shapefile que serão usados
+-- Define os nomes dos campos no shapefile que serão usados no modelo
 local nomes_atributos = {
     uso  = "Uso",
     solo = "Solo",
@@ -28,10 +33,10 @@ local nomes_atributos = {
 }
 
 
-
 -- ===============================================================
 -- CLASSES DE USO DA TERRA
 -- ===============================================================
+-- Cada classe representa um tipo de cobertura ou uso do solo
 tabela_usos = {
     MANGUE                        = { valor = 1,  cor = {0, 100, 0},      nome = "Mangue" },
     VEGETACAO_TERRESTRE           = { valor = 2,  cor = {128, 128, 0},    nome = "Vegetação Terrestre" },
@@ -49,115 +54,26 @@ tabela_usos = {
 -- ===============================================================
 -- CLASSES DE SOLO
 -- ===============================================================
+-- Representa diferentes tipos de solo ou substrato na área de estudo
 tabela_solos = {
     CANAL_FLUVIAL   = { valor = 0, cor = {0, 0, 255},   nome = "Canal Fluvial" },
     MANGUE          = { valor = 3, cor = {0, 100, 0},   nome = "Mangue" },
-    MANGUE_MIGRADO  = { valor = 9, cor = {34, 139, 34}, nome = "Mangue Migrado" }
+    MANGUE_MIGRADO  = { valor = 9, cor = {34, 139, 34}, nome = "Mangue Migrado" },
+    OUTROS          = { valor = 4, cor = {0, 0, 0},     nome = "Outros" }
 }
-
-
--- ===============================================================
--- USOS INUNDADOS
--- ===============================================================
--- Tabela auxiliar que identifica rapidamente quais usos estão sob inundação
-local usos_inundados = {
-    [tabela_usos.MAR.valor]                          = true,
-    [tabela_usos.SOLO_INUNDADO.valor]                = true,
-    [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor]    = true,
-    [tabela_usos.MANGUE_INUNDADO.valor]              = true,
-    [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
-}
-
-
-
--- ===============================================================
--- REGRAS DE INUNDAÇÃO
--- ===============================================================
--- Define as transformações de uso da terra quando ocorre inundação
-local regras_inundacao = {
-    [tabela_usos.MANGUE.valor]               = tabela_usos.MANGUE_INUNDADO.valor,
-    [tabela_usos.MANGUE_MIGRADO.valor]       = tabela_usos.MANGUE_INUNDADO.valor,
-    [tabela_usos.VEGETACAO_TERRESTRE.valor]  = tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor,
-    [tabela_usos.AREA_ANTROPIZADA.valor]     = tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor,
-    [tabela_usos.SOLO_DESCOBERTO.valor]      = tabela_usos.SOLO_INUNDADO.valor
-}
-
-
-
-
-
-
--- ===============================================================
--- REGRAS DE MIGRAÇÃO DE SOLOS
--- ===============================================================
--- Define condições de origem, destino e transformação para solos
-local regrasMigracaoSolo = {
-    origens = {
-        [tabela_solos.MANGUE.valor]         = true,
-        [tabela_solos.MANGUE_MIGRADO.valor] = true,
-        [tabela_solos.CANAL_FLUVIAL.valor]  = true
-    },
-    alvos = {
-        [tabela_usos.VEGETACAO_TERRESTRE.valor] = true,
-        [tabela_usos.SOLO_DESCOBERTO.valor]     = true
-    },
-    soloDestino = tabela_solos.MANGUE_MIGRADO.valor
-}
-
-
-
--- ===============================================================
--- REGRAS DE MIGRAÇÃO DE USOS
--- ===============================================================
--- Controla o processo de migração dos usos do solo relacionados ao mangue
-local regrasMigracaoUsos = {
-    origens = {
-        [tabela_usos.MANGUE.valor]         = true,
-        [tabela_usos.MANGUE_MIGRADO.valor] = true
-    },
-    alvos = {
-        [tabela_usos.VEGETACAO_TERRESTRE.valor] = true,
-        [tabela_usos.SOLO_DESCOBERTO.valor]     = true
-    },
-    condSolos = {
-        [tabela_solos.MANGUE.valor]         = true,
-        [tabela_solos.MANGUE_MIGRADO.valor] = true
-    },
-    usoDestino = tabela_usos.MANGUE_MIGRADO.valor
-}
-
-
-
--- ===============================================================
--- REGRAS DE ACREÇÃO VERTICAL
--- ===============================================================
--- Controla o acúmulo vertical de sedimentos nos solos do tipo mangue
-local regrasAcrecao = {
-    solosPermitidos = {
-        [tabela_solos.MANGUE.valor]         = true,
-        [tabela_solos.MANGUE_MIGRADO.valor] = true
-    },
-    usosProibidos = {
-        [tabela_usos.MAR.valor]                          = true,
-        [tabela_usos.SOLO_INUNDADO.valor]                = true,
-        [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor]    = true,
-        [tabela_usos.MANGUE_INUNDADO.valor]              = true,
-        [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
-    }
-}
-
 
 
 -- ===============================================================
 -- CARREGAMENTO DO PROJETO E CRIAÇÃO DO ESPAÇO CELULAR
 -- ===============================================================
+-- Carrega o projeto QGIS e define o espaço celular com base no shapefile
 local projeto = Project {
     file = "recorte.qgs",
     cell_usos = "data/teste_dinamica/Recorte_Teste.shp",
     clean = true
 }
 
--- Criação do espaço celular com os atributos definidos
+-- Cria o espaço celular com os atributos definidos
 local espacoCelular = CellularSpace {
     project = projeto,
     layer   = "cell_usos",
@@ -165,67 +81,44 @@ local espacoCelular = CellularSpace {
     select  = nomes_atributos
 }
 
--- Criação da vizinhança de Moore e sincronização inicial
+-- Define a vizinhança de Moore (8 vizinhos) e sincroniza o estado inicial
 espacoCelular:createNeighborhood { strategy = "moore", self = false }
 espacoCelular:synchronize()
-
 
 
 -- ===============================================================
 -- AMBIENTE DE SIMULAÇÃO
 -- ===============================================================
+-- Criação do ambiente principal com os modelos e processos envolvidos
 local env = Environment {
-    -- Modelos dinâmicos principais
-
-
     
-    hidro = Hidro(
-        espacoCelular,
-        usos_inundados,
-        regras_inundacao,
-        nomes_atributos
-    ) {
-        taxaElevacaoMar = 0.5
-    },
-
-   
-    mangue = Mangue(
-        espacoCelular,
-
-        regrasMigracaoSolo,
-        regrasMigracaoUsos,
-        regrasAcrecao,
-        nomes_atributos
-    ) {
-        taxaElevacaoMar = 0.5,
-        alturaMare =  0 },
- 
+    -- Modelos de dinâmica
+    hidro  = Hidro(espacoCelular, tabela_usos, nomes_atributos) { taxaElevacaoMar = TAXA_ELEVACAO_MAR },
+    mangue = Mangue(espacoCelular, tabela_solos, tabela_usos, nomes_atributos) { taxaElevacaoMar = TAXA_ELEVACAO_MAR, alturaMare = 0 },
 
     -- Cálculo inicial da altitude média
     CalcularAltitudeMedia(espacoCelular, nomes_atributos) {}
 }
 
 
-
 -- ===============================================================
 -- MAPAS E VISUALIZAÇÃO
 -- ===============================================================
-mapaUso = mapaUso(espacoCelular, tabela_usos, nomes_atributos.uso)
-env:add(Event { action = mapaUso })
+-- Adiciona diretamente ao ambiente os mapas temáticos de uso, solo e altitude
 
-mapaSolo = mapaSolo(espacoCelular, tabela_solos, nomes_atributos.solo)
-env:add(Event { action = mapaSolo })
+env:add(Event { action = mapaUso(espacoCelular, tabela_usos, nomes_atributos.uso) })
+env:add(Event { action = mapaSolo(espacoCelular, tabela_solos, nomes_atributos.solo) })
+env:add(Event { action = mapaAltitude(espacoCelular, nomes_atributos.alt) })
 
-mapaAltitude = mapaAltitude(espacoCelular, nomes_atributos.alt)
-env:add(Event { action = mapaAltitude })
-
--- Atualização periódica do espaço celular
+-- Sincronização periódica do espaço celular durante a simulação
 env:add(Event { action = function() espacoCelular:synchronize() end })
-
 
 
 -- ===============================================================
 -- EXECUÇÃO DA SIMULAÇÃO
 -- ===============================================================
-env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
+-- Inicia a simulação completa
+-- (para modo interativo, descomente a linha abaixo)
+-- env:add(Event { action = function() print("Pressione ENTER para continuar...") io.read() end })
+
 env:run()

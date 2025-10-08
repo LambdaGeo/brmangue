@@ -1,3 +1,8 @@
+
+
+
+
+
 -- ===============================================================
 -- FUNÇÕES AUXILIARES
 -- ===============================================================
@@ -32,7 +37,35 @@ end
 -- @param regras_inundacao: tabela de transformações (uso -> uso_inundado)
 -- @param nomes_atributos: tabela com os nomes dos atributos da célula:
 --        { uso = "Usos", alt = "Alt2" }
-function Hidro(cs, usos_inundados, regras_inundacao, nomes_atributos)
+function Hidro(cs, tabela_usos, nomes_atributos)
+
+
+    -- ===============================================================
+-- USOS INUNDADOS
+-- ===============================================================
+-- Tabela auxiliar que identifica rapidamente quais usos estão sob inundação
+local usos_inundados = {
+    [tabela_usos.MAR.valor]                          = true,
+    [tabela_usos.SOLO_INUNDADO.valor]                = true,
+    [tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor]    = true,
+    [tabela_usos.MANGUE_INUNDADO.valor]              = true,
+    [tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor] = true
+}
+
+
+
+-- ===============================================================
+-- REGRAS DE INUNDAÇÃO
+-- ===============================================================
+-- Define as transformações de uso da terra quando ocorre inundação
+local regras_inundacao = {
+    [tabela_usos.MANGUE.valor]               = tabela_usos.MANGUE_INUNDADO.valor,
+    [tabela_usos.MANGUE_MIGRADO.valor]       = tabela_usos.MANGUE_INUNDADO.valor,
+    [tabela_usos.VEGETACAO_TERRESTRE.valor]  = tabela_usos.VEGETACAO_TERRESTRE_INUNDADA.valor,
+    [tabela_usos.AREA_ANTROPIZADA.valor]     = tabela_usos.AREA_ANTROPIZADA_INUNDADA.valor,
+    [tabela_usos.SOLO_DESCOBERTO.valor]      = tabela_usos.SOLO_INUNDADO.valor
+}
+
 
     return Model {
         start = 1,
