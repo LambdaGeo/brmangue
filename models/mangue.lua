@@ -46,11 +46,11 @@ function aplicarAcrecao(celula, nomes_atributos, regrasAcrecao, taxaAcrecao_m)
     local attrUso  = nomes_atributos.uso
     local attrAlt  = nomes_atributos.alt
 
-    local soloPermitido = regrasAcrecao.solosPermitidos[celula[attrSolo]]
-    local usoPermitido  = not regrasAcrecao.usosProibidos[celula[attrUso]]
+    local soloPermitido = regrasAcrecao.solosPermitidos[celula.past[attrSolo]]
+    local usoPermitido  = not regrasAcrecao.usosProibidos[celula.past[attrUso]]
 
     if soloPermitido and usoPermitido then
-        celula[attrAlt] = celula[attrAlt] + taxaAcrecao_m
+        celula[attrAlt] = celula[attrAlt] + taxaAcrecao_m 
     end
 end
 
@@ -145,7 +145,7 @@ local regrasAcrecao = {
             forEachCell(espacoCelular, function(celula)
                 migrarSolos(celula, nomes_atributos, regrasMigracaoSolo, zonaInfluencia)
                 migrarUsos(celula, nomes_atributos, regrasMigracaoUsos, zonaInfluencia)
-                --aplicarAcrecao(celula, nomes_atributos, regrasAcrecao, taxaAcrecao_m)
+                aplicarAcrecao(celula, nomes_atributos, regrasAcrecao, taxaAcrecao_m)
             end)
         end,
 
