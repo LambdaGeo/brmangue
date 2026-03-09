@@ -89,9 +89,9 @@ local mangue_model = Mangue(espacoCelular, tabela_solos, tabela_usos, nomes_atri
 -- CONSTANTES DO MODELO
 -- ===============================================================
 -- Taxa de elevação do nível do mar (em metros/ano, por exemplo)
-local TAXA_ELEVACAO_MAR = 0.011
+local TAXA_ELEVACAO_MAR = 0.5
 local ALTURA_MARE = 0
-local FINAL_TIME = 80
+local FINAL_TIME = 10
 
 -- ===============================================================
 -- AMBIENTE DE SIMULAÇÃO
