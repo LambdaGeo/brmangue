@@ -89,8 +89,8 @@ local mangue_model = Mangue(espacoCelular, tabela_solos, tabela_usos, nomes_atri
 -- ===============================================================
 -- Taxa de elevação do nível do mar (em metros/ano, por exemplo)
 local TAXA_ELEVACAO_MAR = 0.5
-local ALTURA_MARE = 5
-local FINAL_TIME = 20
+local ALTURA_MARE = 6
+local FINAL_TIME = 11
 
 -- ===============================================================
 -- AMBIENTE DE SIMULAÇÃO
@@ -103,10 +103,10 @@ local env = Environment {
             finalTime = FINAL_TIME, 
             taxaElevacaoMar = TAXA_ELEVACAO_MAR 
     },
-    --mangue =  mangue_model{ 
-      --      finalTime = FINAL_TIME, 
-        --    taxaElevacaoMar = TAXA_ELEVACAO_MAR, alturaMare = ALTURA_MARE 
-    --},
+    mangue =  mangue_model{ 
+            finalTime = FINAL_TIME, 
+            taxaElevacaoMar = TAXA_ELEVACAO_MAR, alturaMare = ALTURA_MARE 
+    },
 
     -- Cálculo inicial da altitude média
     -- usado para verificar se o aumento do nivel do mar esta funcionando
