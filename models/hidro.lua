@@ -62,69 +62,38 @@ function Hidro(cs, tabela_usos, nomes_atributos)
     return Model {
         start = 1,
         finalTime = 100,
-
-        -- Taxa média anual de elevação do nível do mar (m/ano)
-        -- Fonte: IPCC (2013)
         taxaElevacaoMar = 0.011,
 
-        -- ===========================================================
-        -- EXECUÇÃO (a cada passo temporal da simulação)
-        -- ===========================================================
         execute = function(model, event)
-            local tempo = event:getTime()
+            local attrUso  = nomes_atributos.uso
+            local attrAlt  = nomes_atributos.alt
+            local nivelMar = event:getTime() * model.taxaElevacaoMar
 
-            -----------------------------------------------------------
-            -- Validação dos parâmetros essenciais
-            -----------------------------------------------------------
-            local attrUso = nomes_atributos.uso
-            local attrAlt = nomes_atributos.alt
-
-            if not attrUso or attrUso == "" then
-                error("Campo 'uso' ausente em nomes_atributos.")
-            end
-            if not attrAlt or attrAlt == "" then
-                error("Campo 'alt' ausente em nomes_atributos.")
-            end
-
-            -- Valida se os atributos existem no espaço celular
-            local primeiraCelula = cs.cells[1]
-            if primeiraCelula.past[attrUso] == nil then
-                error("Atributo '" .. attrUso .. "' não existe no espaço celular.")
-            end
-            if primeiraCelula.past[attrAlt] == nil then
-                error("Atributo '" .. attrAlt .. "' não existe no espaço celular.")
-            end
-
-            -----------------------------------------------------------
-            -- Dinâmica hidrológica: elevação e propagação da inundação
-            -----------------------------------------------------------
             forEachCell(cs, function(celula)
                 local usoAtual = celula.past[attrUso]
                 local altAtual = celula.past[attrAlt]
 
-                -- Verifica se a célula é mar/inundada e tem altitude válida
                 if ehMarOuInundado(usoAtual) and altAtual >= 0 then
-                    local vizinhosBaixos = 1 -- inclui a própria célula
+                    local vizinhosBaixos = 1
 
-                    -- Conta quantos vizinhos têm altitude menor ou igual
                     forEachNeighbor(celula, function(vizinho)
                         if vizinho.past[attrAlt] <= altAtual then
                             vizinhosBaixos = vizinhosBaixos + 1
                         end
                     end)
 
-                    -- Calcula o fluxo de elevação distribuído entre os vizinhos baixos
                     local fluxo = model.taxaElevacaoMar / vizinhosBaixos
 
-                    -- Eleva a altitude da célula atual
+                    -- altimetria: condicao relativa (difusao de fluxo)
                     celula[attrAlt] = celula[attrAlt] + fluxo
 
-                    -- Propaga a elevação para vizinhos com menor altitude
                     forEachNeighbor(celula, function(vizinho)
                         if vizinho.past[attrAlt] <= altAtual then
                             vizinho[attrAlt] = vizinho[attrAlt] + fluxo
+                        end
 
-                            -- Se o vizinho ainda não estiver inundado, aplica a transformação
+                        -- inundacao: cota absoluta (BR-MANGUE, Bezerra 2014)
+                        if vizinho.past[attrAlt] <= nivelMar then
                             if not ehMarOuInundado(vizinho.past[attrUso]) then
                                 aplicarInundacao(vizinho, attrUso)
                             end
@@ -134,9 +103,6 @@ function Hidro(cs, tabela_usos, nomes_atributos)
             end)
         end,
 
-        -- ===========================================================
-        -- INICIALIZAÇÃO DO MODELO
-        -- ===========================================================
         init = function(model)
             model.timer = Timer { Event { action = model } }
         end
