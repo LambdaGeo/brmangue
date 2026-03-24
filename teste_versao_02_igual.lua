@@ -22,9 +22,9 @@ require("visualization/maps") -- Módulo de visualização e geração de mapas
 -- ===============================================================
 -- Define os nomes dos campos no shapefile que serão usados no modelo
 local nomes_atributos = {
-    uso  = "Uso",
-    solo = "Solo",
-    alt  = "Altitude"
+    uso  = "uso",
+    --solo = "Solo",
+    alt  = "alt"
 }
 
 
@@ -46,6 +46,7 @@ tabela_usos = {
 }
 
 
+
 -- ===============================================================
 -- CLASSES DE SOLO
 -- ===============================================================
@@ -63,16 +64,16 @@ tabela_solos = {
 -- ===============================================================
 -- Carrega o projeto QGIS e define o espaço celular com base no shapefile
 local projeto = Project {
-    file = "recorte.qgs",
-    cell_usos = "data/teste_dinamica/Recorte_Teste.shp",
+    file = "flood2.qgs",
+    uso_solo = "/home/sergio/Downloads/flood_model/flood_model.shp",
     clean = true
 }
 
 -- Cria o espaço celular com os atributos definidos
 local espacoCelular = CellularSpace {
     project = projeto,
-    layer   = "cell_usos",
-    xy      = { "Col", "Lin" },
+    layer   = "uso_solo",
+    xy      = { "col", "row" },
     select  = nomes_atributos
 }
 
@@ -88,8 +89,8 @@ local mangue_model = Mangue(espacoCelular, tabela_solos, tabela_usos, nomes_atri
 -- CONSTANTES DO MODELO
 -- ===============================================================
 -- Taxa de elevação do nível do mar (em metros/ano, por exemplo)
-local TAXA_ELEVACAO_MAR = 0.5
-local ALTURA_MARE = 6
+local TAXA_ELEVACAO_MAR = 0.05
+local ALTURA_MARE = 0
 local FINAL_TIME = 11
 
 -- ===============================================================
@@ -103,10 +104,10 @@ local env = Environment {
             finalTime = FINAL_TIME, 
             taxaElevacaoMar = TAXA_ELEVACAO_MAR 
     },
-    mangue =  mangue_model{ 
-            finalTime = FINAL_TIME, 
-            taxaElevacaoMar = TAXA_ELEVACAO_MAR, alturaMare = ALTURA_MARE 
-    },
+    --mangue =  mangue_model{ 
+      --      finalTime = FINAL_TIME, 
+        --    taxaElevacaoMar = TAXA_ELEVACAO_MAR, alturaMare = ALTURA_MARE 
+    --},
 
     -- Cálculo inicial da altitude média
     -- usado para verificar se o aumento do nivel do mar esta funcionando
@@ -120,8 +121,8 @@ local env = Environment {
 -- Adiciona diretamente ao ambiente os mapas temáticos de uso, solo e altitude
 
 env:add(Event { action = mapaUso(espacoCelular, tabela_usos, nomes_atributos.uso) })
-env:add(Event { action = mapaSolo(espacoCelular, tabela_solos, nomes_atributos.solo) })
-env:add(Event { action = mapaAltitude(espacoCelular, nomes_atributos.alt) })
+--env:add(Event { action = mapaSolo(espacoCelular, tabela_solos, nomes_atributos.solo) })
+--env:add(Event { action = mapaAltitude(espacoCelular, nomes_atributos.alt) })
 
 -- Sincronização periódica do espaço celular durante a simulação
 env:add(Event { action = function() espacoCelular:synchronize() end })
