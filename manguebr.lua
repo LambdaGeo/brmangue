@@ -119,10 +119,6 @@ local env = Environment {
 -- ===============================================================
 -- Adiciona diretamente ao ambiente os mapas temáticos de uso, solo e altitude
 
-env:add(Event { action = mapaUso(espacoCelular, tabela_usos, nomes_atributos.uso) })
-env:add(Event { action = mapaSolo(espacoCelular, tabela_solos, nomes_atributos.solo) })
-env:add(Event { action = mapaAltitude(espacoCelular, nomes_atributos.alt) })
-
 env:add(Event { action = function(event)
     local t =  event:getTime()
     local f = io.open(string.format("output/step_%02d.csv", t), "w")
@@ -136,6 +132,12 @@ env:add(Event { action = function(event)
     f:close()
     
 end })
+
+env:add(Event { action = mapaUso(espacoCelular, tabela_usos, nomes_atributos.uso) })
+env:add(Event { action = mapaSolo(espacoCelular, tabela_solos, nomes_atributos.solo) })
+env:add(Event { action = mapaAltitude(espacoCelular, nomes_atributos.alt) })
+
+
 
 -- Sincronização periódica do espaço celular durante a simulação
 env:add(Event { action = function() espacoCelular:synchronize() end })
