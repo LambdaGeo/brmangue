@@ -15,16 +15,16 @@ require("models/utils")       -- Funções utilitárias de apoio
 require("visualization/maps") -- Módulo de visualização e geração de mapas
 
 
-
+passo = 0
 
 -- ===============================================================
 -- DEFINIÇÃO DOS NOMES DOS ATRIBUTOS
 -- ===============================================================
 -- Define os nomes dos campos no shapefile que serão usados no modelo
 local nomes_atributos = {
-    uso  = "Uso",
-    solo = "Solo",
-    alt  = "Altitude"
+    uso  = "uso",
+    solo = "solo",
+    alt  = "alt"
 }
 
 
@@ -64,7 +64,7 @@ tabela_solos = {
 -- Carrega o projeto QGIS e define o espaço celular com base no shapefile
 local projeto = Project {
     file = "recorte.qgs",
-    cell_usos = "data/teste_dinamica/Recorte_Teste.shp",
+    cell_usos = "data/elevacao_pol/elevacao_pol.shp",
     clean = true
 }
 
@@ -72,7 +72,7 @@ local projeto = Project {
 local espacoCelular = CellularSpace {
     project = projeto,
     layer   = "cell_usos",
-    xy      = { "Col", "Lin" },
+    xy      = { "col", "row" },
     select  = nomes_atributos
 }
 
@@ -88,9 +88,9 @@ local mangue_model = Mangue(espacoCelular, tabela_solos, tabela_usos, nomes_atri
 -- CONSTANTES DO MODELO
 -- ===============================================================
 -- Taxa de elevação do nível do mar (em metros/ano, por exemplo)
-local TAXA_ELEVACAO_MAR = 0.5
+local TAXA_ELEVACAO_MAR = 0.05
 local ALTURA_MARE = 6
-local FINAL_TIME = 11
+local FINAL_TIME = 30
 
 -- ===============================================================
 -- AMBIENTE DE SIMULAÇÃO
@@ -122,6 +122,20 @@ local env = Environment {
 env:add(Event { action = mapaUso(espacoCelular, tabela_usos, nomes_atributos.uso) })
 env:add(Event { action = mapaSolo(espacoCelular, tabela_solos, nomes_atributos.solo) })
 env:add(Event { action = mapaAltitude(espacoCelular, nomes_atributos.alt) })
+
+env:add(Event { action = function(event)
+    local t =  event:getTime()
+    local f = io.open(string.format("output/step_%02d.csv", t), "w")
+    f:write("col,row,uso,solo,alt\n")
+    forEachCell(espacoCelular, function(c)
+        f:write(c.col..","..c.row..","
+            ..c[nomes_atributos.uso]..","
+            ..c[nomes_atributos.solo]..","
+            ..c[nomes_atributos.alt].."\n")
+    end)
+    f:close()
+    
+end })
 
 -- Sincronização periódica do espaço celular durante a simulação
 env:add(Event { action = function() espacoCelular:synchronize() end })
